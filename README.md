@@ -29,7 +29,7 @@ The project design wireframes show the required pages and user flow for the shar
 
 Wireframe document: [Project Design Wireframes PDF](./Project%20Design%20Wireframes.pdf)
 
-Wireframe Tool link: [View Wireframes]([PASTE_WHIMSICAL_LINK_HERE](https://whimsical.com/sodv1201-group-1/project-design-wireframes-BhxuSHcHfFxAjS19qGzThW))
+Wireframe Tool link: [View Wireframes](https://whimsical.com/sodv1201-group-1/project-design-wireframes-BhxuSHcHfFxAjS19qGzThW)
 
 Included pages:
 - User Flow
