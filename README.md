@@ -25,4 +25,19 @@ The group is using GitHub Issues and a GitHub Project table to organize the proj
 
 ## Wireframes
 
-Wireframe screenshots or a link will be added during the Project Design phase.
+The project design wireframes show the required pages and user flow for the shared workspace rental web application.
+
+Wireframe document: [Project Design Wireframes PDF](./Project%20Design%20Wireframes.pdf)
+
+Wireframe Tool link: [View Wireframes]([PASTE_WHIMSICAL_LINK_HERE](https://whimsical.com/sodv1201-group-1/project-design-wireframes-BhxuSHcHfFxAjS19qGzThW))
+
+Included pages:
+- User Flow
+- Landing Page
+- Registration Page
+- Login Page
+- My Properties Page
+- Add Property Page
+- Add Workspace Page
+- List of Workspaces Page
+- Workspace Details Page
