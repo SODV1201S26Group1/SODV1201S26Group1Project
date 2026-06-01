@@ -1,0 +1,25 @@
+{
+  "name": "sodv1201s26group1project",
+  "version": "1.0.0",
+  "description": "Group 1 final project repository for SODV1201 Web Programming, Spring 2026 at Bow Valley College.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SODV1201S26Group1/SODV1201S26Group1Project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SODV1201S26Group1/SODV1201S26Group1Project/issues"
+  },
+  "homepage": "https://github.com/SODV1201S26Group1/SODV1201S26Group1Project#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
