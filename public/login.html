@@ -1,16 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>Login</title>
- </head>
-  <body>
-     <h1>Login</h1>
-     <form>
-         <input type="email" placeholder="Email" /><br>
-         <input type="password" placeholder="Password" /><br>
-         <button type="submit">Login</button>
-     </form>
- </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+    <h1>Login</h1>
+    <input type="email" id="email" placeholder="Email"/><br>
+    <input type="password" id="password" placeholder="Password"/><br>
+    <p id="message"></p>
+    <button onclick="login()">Login</button>
+
+    <script>
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            const res = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                localStorage.setItem('role', data.role);
+                localStorage.setItem('email', email);
+                if (data.role === 'owner') {
+                    window.location.href = 'my-properties.html';
+                } else {
+                    window.location.href = 'workspaces.html';
+                }
+            } else {
+                document.getElementById('message').textContent = data.message;
+            }
+        }
+    </script>
+</body>
 </html>
