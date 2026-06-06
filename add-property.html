@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Property</title>
+</head>
+<body>
+    <h1>Add New Property</h1>
+    <input type="text" id="address" placeholder="Address"/><br>
+    <input type="text" id="neighborhood" placeholder="Neighborhood"/><br>
+    <input type="number" id="squareFootage" placeholder="Square Footage"/><br>
+    <select id="garage">
+        <option value="">Garage Available?</option>
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+    </select><br>
+    <select id="publicTransport">
+        <option value="">Public Transport Access?</option>
+        <option value="Yes">Yes</option>
+        <option value="No">No</option>
+    </select><br>
+    <button onclick="addProperty()">Save Property</button>
+    <button onclick="window.location.href='my-properties.html'">Cancel</button>
+    <p id="message"></p>
+
+    <script>
+        const email = localStorage.getItem('email');
+
+        if (!email) {
+            window.location.href = 'login.html';
+        }
+
+        async function addProperty() {
+            const address = document.getElementById('address').value;
+            const neighborhood = document.getElementById('neighborhood').value;
+            const squareFootage = document.getElementById('squareFootage').value;
+            const garage = document.getElementById('garage').value;
+            const publicTransport = document.getElementById('publicTransport').value;
+
+            const res = await fetch('/properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, address, neighborhood, squareFootage, garage, publicTransport })
+            });
+            const data = await res.json();
+            document.getElementById('message').textContent = data.message;
+
+            if (data.success) {
+                window.location.href = 'my-properties.html';
+            }
+        }
+    </script>
+</body>
+</html>
