@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Properties</title>
+</head>
+<body>
+    <h1>My Properties</h1>
+    <button onclick="window.location.href='add-property.html'">Add New Property</button>
+    <button onclick="logout()">Logout</button>
+    <div id="properties-list"></div>
+
+    <script>
+        const email = localStorage.getItem('email');
+
+        if (!email) {
+            window.location.href = 'login.html';
+        }
+
+        async function loadProperties() {
+            const res = await fetch('/properties?email=' + email);
+            const data = await res.json();
+            const list = document.getElementById('properties-list');
+            list.innerHTML = '';
+
+            if (data.properties.length === 0) {
+                list.innerHTML = '<p>No properties yet.</p>';
+                return;
+            }
+
+            data.properties.forEach((p, index) => {
+                list.innerHTML += `
+                    <div style="border:1px solid #ccc; margin:10px; padding:10px;">
+                        <p><strong>Address:</strong> ${p.address}</p>
+                        <p><strong>Neighborhood:</strong> ${p.neighborhood}</p>
+                        <p><strong>Square Footage:</strong> ${p.squareFootage}</p>
+                        <p><strong>Garage:</strong> ${p.garage}</p>
+                        <p><strong>Public Transport:</strong> ${p.publicTransport}</p>
+                        <button onclick="deleteProperty(${index})">Delete</button>
+                        <button onclick="window.location.href='add-workspace.html?propertyIndex=${index}'">Add Workspace</button>
+                        <button onclick="window.location.href='workspaces.html?propertyIndex=${index}'">View Workspaces</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function deleteProperty(index) {
+            const res = await fetch('/properties/' + index, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            if (data.success) {
+                loadProperties();
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        loadProperties();
+    </script>
+</body>
+</html>
