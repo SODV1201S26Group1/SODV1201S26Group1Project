@@ -4,13 +4,153 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f0f0;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        nav h1 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: white;
+            background-color: #5b5bd6;
+            padding: 8px 16px;
+            border-radius: 5px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+        }
+
+        .card {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .card h2 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .card p.subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        #message {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #5b5bd6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #4a4ac4;
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .register-link a {
+            color: #5b5bd6;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
-    <h1>Login</h1>
-    <input type="email" id="email" placeholder="Email"/><br>
-    <input type="password" id="password" placeholder="Password"/><br>
-    <p id="message"></p>
-    <button onclick="login()">Login</button>
+    <nav>
+        <h1>Shared Workspace App</h1>
+        <a href="register.html">Register</a>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2>Login</h2>
+            <p class="subtitle">Sign in to continue.</p>
+
+            <label>Email / Username</label>
+            <input type="email" id="email" placeholder="Enter your email or username"/>
+
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter your password"/>
+
+            <p id="message"></p>
+
+            <button onclick="login()">Login</button>
+
+            <div class="register-link">
+                <p>No account? <a href="register.html">Register</a></p>
+            </div>
+        </div>
+    </div>
 
     <script>
         async function login() {
