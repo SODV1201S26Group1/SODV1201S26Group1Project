@@ -4,20 +4,157 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f0f0;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        nav h1 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+            padding: 8px 16px;
+            border-radius: 5px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+        }
+
+        .card {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .card h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #5b5bd6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        button:hover {
+            background-color: #4a4ac4;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .login-link a {
+            color: #5b5bd6;
+            font-style: italic;
+        }
+
+        #message {
+            text-align: center;
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Create Account</h1>
-    <input type="text" id="name" placeholder="Full Name"/><br>
-    <input type="text" id="phone" placeholder="Phone Number"/><br>
-    <input type="email" id="email" placeholder="Email"/><br>
-    <input type="password" id="password" placeholder="Password"/><br>
-    <select id="role">
-        <option value="">Select Role</option>
-        <option value="owner">Owner</option>
-        <option value="coworker">Coworker</option>
-    </select><br>
-    <button onclick="register()">Register</button>
-    <p id="message"></p>
+    <nav>
+        <h1>Shared Workspace App</h1>
+        <a href="login.html">Login</a>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2>Create Account</h2>
+
+            <label>Full Name</label>
+            <input type="text" id="name" placeholder="Enter your full name"/>
+
+            <label>Phone Number</label>
+            <input type="text" id="phone" placeholder="Enter your phone number"/>
+
+            <label>Email / Username</label>
+            <input type="email" id="email" placeholder="Enter your email or username"/>
+
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter your password"/>
+
+            <label>Confirm Password</label>
+            <input type="password" id="confirmPassword" placeholder="Re-enter your password"/>
+
+            <label>Role</label>
+            <select id="role">
+                <option value="">Select role: Owner / Coworker</option>
+                <option value="owner">Owner</option>
+                <option value="coworker">Coworker</option>
+            </select>
+
+            <button onclick="register()">Register</button>
+            <p id="message"></p>
+
+            <div class="login-link">
+                <p>Already have an account? <a href="login.html">Login</a></p>
+            </div>
+        </div>
+    </div>
 
     <script>
         async function register() {
@@ -25,7 +162,13 @@
             const phone = document.getElementById('phone').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
             const role = document.getElementById('role').value;
+
+            if (password !== confirmPassword) {
+                document.getElementById('message').textContent = 'Passwords do not match!';
+                return;
+            }
 
             const res = await fetch('/register', {
                 method: 'POST',
