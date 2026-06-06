@@ -1,25 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Register</title>
- </head>
-      <body>
-            <h1>Create Account</h1>
-        <form>
-                  <input type="text" placeholder="Full Name"/><br>
-                  
-                  <input type="text" placeholder="Phone Number" /><br>
-                  
-                  <input type="email" placeholder="Email" /><br>
-                  <select>
-                        <option>Select Role</option>
-                        <option>Owner</option>
-                        <option>Coworker</option>
-              </select><br>
-             <button type="submit">Register</button>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+</head>
+<body>
+    <h1>Create Account</h1>
+    <input type="text" id="name" placeholder="Full Name"/><br>
+    <input type="text" id="phone" placeholder="Phone Number"/><br>
+    <input type="email" id="email" placeholder="Email"/><br>
+    <input type="password" id="password" placeholder="Password"/><br>
+    <select id="role">
+        <option value="">Select Role</option>
+        <option value="owner">Owner</option>
+        <option value="coworker">Coworker</option>
+    </select><br>
+    <button onclick="register()">Register</button>
+    <p id="message"></p>
 
-        </form>>
-     </body>
- </html>
+    <script>
+        async function register() {
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            const res = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, phone, email, password, role })
+            });
+            const data = await res.json();
+            document.getElementById('message').textContent = data.message;
+
+            if (data.success) {
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+</body>
+</html>
