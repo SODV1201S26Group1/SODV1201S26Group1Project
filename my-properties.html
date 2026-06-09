@@ -97,9 +97,29 @@
         }
 
         .property-card {
+            position: relative;
             padding: 24px;
             background-color: white;
             border: 1px solid #c8d0d8;
+        }
+
+        .delete-icon-button {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border: 1px solid #d9534f;
+            border-radius: 6px;
+            background: white;
+            color: #d9534f;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .delete-icon-button:hover {
+            background: #fff3f3;
         }
 
         .property-status {
@@ -126,7 +146,7 @@
 
         .property-actions {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
             margin-top: 20px;
             padding-top: 18px;
@@ -290,6 +310,15 @@
                 data.properties.forEach((property, index) => {
                     list.innerHTML += `
                         <article class="property-card">
+                            <button
+                                class="delete-icon-button"
+                                type="button"
+                                title="Delete Property"
+                                onclick="deleteProperty(${index})"
+                            >
+                                &#128465;
+                            </button>
+
                             <div class="property-status">
                                 <span class="status-label">Active</span>
 
@@ -329,13 +358,6 @@
                             </div>
 
                             <div class="property-actions">
-                                <button
-                                    class="outline-button"
-                                    onclick="deleteProperty(${index})"
-                                >
-                                    Delete
-                                </button>
-
                                 <button
                                     class="filled-button"
                                     onclick="window.location.href=

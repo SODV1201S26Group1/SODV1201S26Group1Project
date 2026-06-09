@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Workspaces</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            color: #222;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        nav h1 {
+            font-size: 18px;
+        }
+
+        .nav-title {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .nav-subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-actions a {
+            border: 1px solid #5b5bd6;
+            color: #5b5bd6;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-actions a:hover {
+            background-color: #f5f5ff;
+        }
+
+        nav button {
+            border: 1px solid #5b5bd6;
+            color: #5b5bd6;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        nav button:hover {
+            background-color: #f5f5ff;
+        }
+
+        .container {
+            max-width: 980px;
+            margin: 24px auto;
+            padding: 0 16px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .workspace-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .workspace-item {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+            padding: 14px;
+        }
+
+        .workspace-title {
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .workspace-meta {
+            font-size: 14px;
+            line-height: 1.45;
+            color: #444;
+        }
+
+        .workspace-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .workspace-actions button {
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid #5b5bd6;
+            background: white;
+            color: #5b5bd6;
+            cursor: pointer;
+        }
+
+        .workspace-actions .danger {
+            border-color: #cc4b4b;
+            color: #cc4b4b;
+        }
+
+        #message {
+            font-size: 14px;
+            color: #444;
+        }
+
+        @media (max-width: 720px) {
+            .filters {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-title">
+            <h1 id="pageTitle">Available Workspaces</h1>
+            <p id="pageSubtitle" class="nav-subtitle"></p>
+        </div>
+        <div class="nav-actions">
+            <a id="backLink" href="index.html">Back</a>
+            <button id="logoutBtn" type="button">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section class="card filters">
+            <div>
+                <label for="typeFilter">Workspace Type</label>
+                <select id="typeFilter">
+                    <option value="">All</option>
+                    <option value="Desk">Desk</option>
+                    <option value="Private Office">Private Office</option>
+                    <option value="Meeting Room">Meeting Room</option>
+                </select>
+            </div>
+            <div>
+                <label for="availabilityFilter">Availability</label>
+                <select id="availabilityFilter">
+                    <option value="">All</option>
+                    <option value="Available">Available</option>
+                    <option value="Unavailable">Unavailable</option>
+                </select>
+            </div>
+        </section>
+
+        <section class="card">
+            <p id="message"></p>
+            <div id="workspaceList" class="workspace-list"></div>
+        </section>
+    </div>
+
+    <script>
+        const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+        const params = new URLSearchParams(window.location.search);
+        const selectedPropertyIndex = params.get('propertyIndex');
+        const ownerMode = role === 'owner' && selectedPropertyIndex !== null;
+
+        if (!email) {
+            window.location.href = 'login.html';
+        }
+
+        let workspaces = [];
+        let messageTimeoutId = null;
+
+        function setMessage(text) {
+            const element = document.getElementById('message');
+            element.textContent = text || '';
+
+            if (messageTimeoutId) {
+                clearTimeout(messageTimeoutId);
+                messageTimeoutId = null;
+            }
+
+            if (text) {
+                messageTimeoutId = setTimeout(() => {
+                    element.textContent = '';
+                    messageTimeoutId = null;
+                }, 3000);
+            }
+        }
+
+        if (ownerMode) {
+            document.getElementById('pageTitle').textContent = 'Manage Workspaces';
+            document.getElementById('pageSubtitle').textContent = 'Owner controls: edit and delete workspaces for the selected property.';
+            document.getElementById('typeFilter').closest('.card').style.display = 'none';
+            document.getElementById('backLink').href = 'my-properties.html';
+            document.getElementById('backLink').textContent = 'Back to My Properties';
+        } else {
+            document.getElementById('backLink').href = 'index.html';
+            document.getElementById('backLink').textContent = 'Back to Dashboard';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
+
+        document.getElementById('typeFilter').addEventListener('change', renderWorkspaces);
+        document.getElementById('availabilityFilter').addEventListener('change', renderWorkspaces);
+
+        async function loadWorkspaces() {
+            const res = await fetch('/workspaces');
+            const data = await res.json();
+            workspaces = data.success ? data.workspaces : [];
+            renderWorkspaces();
+        }
+
+        function renderWorkspaces() {
+            const type = document.getElementById('typeFilter').value;
+            const availability = document.getElementById('availabilityFilter').value;
+
+            const filtered = workspaces.filter((workspace) => {
+                if (ownerMode) {
+                    return workspace.ownerEmail === email && String(workspace.propertyIndex) === String(selectedPropertyIndex);
+                }
+
+                const matchesType = !type || workspace.type === type;
+                const matchesAvailability = !availability || workspace.availability === availability;
+                return matchesType && matchesAvailability;
+            });
+
+            const list = document.getElementById('workspaceList');
+            if (!filtered.length) {
+                list.innerHTML = '<p>No workspaces match your filters.</p>';
+                return;
+            }
+
+            list.innerHTML = '';
+            filtered.forEach((workspace) => {
+                const item = document.createElement('article');
+                item.className = 'workspace-item';
+                const ownerActions = ownerMode
+                    ? `<div class="workspace-actions">
+                        <button type="button" data-action="edit">Edit</button>
+                        <button type="button" class="danger" data-action="delete">Delete</button>
+                       </div>`
+                    : '';
+
+                item.innerHTML = `
+                    <div class="workspace-title">${workspace.type} - ${workspace.address}</div>
+                    <div class="workspace-meta">
+                        Neighborhood: ${workspace.neighborhood}<br>
+                        Capacity: ${workspace.capacity}<br>
+                        Smoking: ${workspace.smoking}<br>
+                        Availability: ${workspace.availability}<br>
+                        Term: ${workspace.leaseTerm}<br>
+                        Price: $${workspace.price}<br>
+                        Owner Contact: ${workspace.ownerEmail}
+                    </div>
+                    ${ownerActions}
+                `;
+
+                if (ownerMode) {
+                    item.querySelector('[data-action="edit"]').addEventListener('click', () => editWorkspace(workspace));
+                    item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteWorkspace(workspace));
+                }
+
+                list.appendChild(item);
+            });
+        }
+
+        async function editWorkspace(workspace) {
+            const type = prompt('Workspace Type', workspace.type);
+            if (type === null) return;
+            const capacity = prompt('Capacity (integer >= 1)', workspace.capacity);
+            if (capacity === null) return;
+            const smoking = prompt('Smoking (Yes/No)', workspace.smoking);
+            if (smoking === null) return;
+            const availability = prompt('Availability (Available/Unavailable)', workspace.availability);
+            if (availability === null) return;
+            const leaseTerm = prompt('Rental Term (Day/Week/Month)', workspace.leaseTerm);
+            if (leaseTerm === null) return;
+            const price = prompt('Price (> 0)', workspace.price);
+            if (price === null) return;
+
+            const res = await fetch(`/workspaces/${workspace.propertyIndex}/${workspace.workspaceIndex}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, type, capacity, smoking, availability, leaseTerm, price })
+            });
+
+            const data = await res.json();
+            setMessage(data.message || 'Workspace update complete.');
+            if (data.success) {
+                loadWorkspaces();
+            }
+        }
+
+        async function deleteWorkspace(workspace) {
+            const shouldDelete = confirm('Delete this workspace?');
+            if (!shouldDelete) return;
+
+            const res = await fetch(`/workspaces/${workspace.propertyIndex}/${workspace.workspaceIndex}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json();
+            setMessage(data.message || 'Workspace delete complete.');
+            if (data.success) {
+                loadWorkspaces();
+            }
+        }
+
+        loadWorkspaces();
+    </script>
+</body>
+</html>
