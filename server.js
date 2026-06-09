@@ -110,7 +110,7 @@ app.post('/properties', (req, res) => {
     const normalizedNeighborhood = (neighborhood || '').trim();
     const parsedSquareFootage = Number(squareFootage);
 
-    if (!normalizedEmail || !normalizedAddress || !normalizedNeighborhood || !Number.isFinite(parsedSquareFootage) || parsedSquareFootage <= 0 || !garage || !publicTransport) {
+    if (!normalizedEmail || !normalizedAddress || !normalizedNeighborhood || !Number.isInteger(parsedSquareFootage) || parsedSquareFootage < 1 || !garage || !publicTransport) {
         return res.json({ success: false, message: 'All property fields are required.' });
     }
 
