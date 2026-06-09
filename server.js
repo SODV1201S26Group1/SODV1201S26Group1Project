@@ -1,3 +1,9 @@
+/*
+AI declaration:
+GitHub Copilot was used to help draft code, explain parts of the assignment by drawing parallels to PLC programming and robotics principles, and help fix errors and refine the code. GitHub Copilot was also used to guide API testing workflows in Postman and support UI testing checks in VS Code.
+Technical background: PLC programming and robotics systems.
+*/
+
 const express = require('express');
 const app = express();
 
