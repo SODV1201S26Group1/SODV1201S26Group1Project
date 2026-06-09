@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared Workspace App</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: white;
+            color: #222;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        nav h1 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: #222;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-links .btn-outline {
+            color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+            padding: 8px 16px;
+            border-radius: 5px;
+        }
+
+        .nav-links .btn-primary {
+            color: white;
+            background-color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+            padding: 8px 16px;
+            border-radius: 5px;
+        }
+
+        .hero {
+            background-color: #f0f0f0;
+            text-align: center;
+            padding: 55px 20px;
+        }
+
+        .hero h2 {
+            font-size: 30px;
+            margin-bottom: 20px;
+        }
+
+        .hero-description {
+            max-width: 760px;
+            margin: 0 auto 25px;
+            line-height: 1.5;
+            color: #444;
+        }
+
+        .search-area {
+            display: flex;
+            justify-content: center;
+            max-width: 650px;
+            margin: 0 auto 20px;
+        }
+
+        .search-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px 0 0 5px;
+            font-size: 14px;
+        }
+
+        .search-area button {
+            padding: 12px 22px;
+            border: none;
+            background-color: #5b5bd6;
+            color: white;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+
+        .hero-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .hero-buttons a {
+            padding: 11px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .hero-buttons .primary {
+            color: white;
+            background-color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+        }
+
+        .hero-buttons .outline {
+            color: #5b5bd6;
+            background-color: white;
+            border: 1px solid #5b5bd6;
+        }
+
+        main {
+            padding: 40px 5%;
+        }
+
+        section {
+            max-width: 1200px;
+            margin: 0 auto 35px;
+        }
+
+        section h2 {
+            font-size: 21px;
+            margin-bottom: 20px;
+        }
+
+        .feature-grid,
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .feature-card,
+        .workspace-card {
+            border: 1px solid #ccc;
+            background-color: white;
+            padding: 20px;
+        }
+
+        .feature-card h3,
+        .workspace-card h3 {
+            font-size: 17px;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #aaa;
+        }
+
+        .feature-card p,
+        .workspace-card p {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #444;
+        }
+
+        .workspace-card p {
+            margin-bottom: 5px;
+        }
+
+        .workspace-card a {
+            display: block;
+            width: 100%;
+            margin-top: 14px;
+            padding: 9px;
+            text-align: center;
+            text-decoration: none;
+            color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+            border-radius: 5px;
+        }
+
+        footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 18px 30px;
+            background-color: #f0f0f0;
+            border-top: 1px solid #ddd;
+            font-size: 13px;
+            color: #555;
+        }
+
+        footer a {
+            color: #555;
+            text-decoration: none;
+        }
+
+        @media (max-width: 800px) {
+            nav {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .feature-grid,
+            .workspace-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-area {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .search-area input,
+            .search-area button {
+                width: 100%;
+                border-radius: 5px;
+            }
+
+            footer {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <h1>Shared Workspace App</h1>
+
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="workspaces.html">Workspaces</a>
+            <a href="my-properties.html">Properties</a>
+            <a href="login.html" class="btn-outline">Login</a>
+            <a href="register.html" class="btn-primary">Register</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <h2>Find or List Shared Workspaces</h2>
+
+        <p class="hero-description">
+            Owners can list properties and workspaces. Coworkers can search
+            available workspaces and view owner contact details.
+        </p>
+
+        <div class="search-area">
+            <input
+                type="text"
+                placeholder="Search by workspace type or neighborhood"
+            >
+            <button type="button">Search</button>
+        </div>
+
+        <div class="hero-buttons">
+            <a href="register.html" class="primary">
+                Register as Owner
+            </a>
+
+            <a href="register.html" class="primary">
+                Register as Coworker
+            </a>
+
+            <a href="login.html" class="outline">
+                Login
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>What You Can Do</h2>
+
+            <div class="feature-grid">
+                <article class="feature-card">
+                    <h3>Find Workspace</h3>
+                    <p>
+                        Search by location, capacity, price, and availability.
+                    </p>
+                </article>
+
+                <article class="feature-card">
+                    <h3>List Property</h3>
+                    <p>
+                        Owners can add properties and attach workspaces.
+                    </p>
+                </article>
+
+                <article class="feature-card">
+                    <h3>Manage Listings</h3>
+                    <p>
+                        Owners can edit or delete properties and workspaces.
+                    </p>
+                </article>
+            </div>
+        </section>
+
+        <section>
+            <h2>Available Workspaces Preview</h2>
+
+            <div class="workspace-grid">
+                <article class="workspace-card">
+                    <h3>Private Office</h3>
+                    <p><strong>Neighborhood:</strong> Downtown Core</p>
+                    <p><strong>Capacity:</strong> 4 people</p>
+                    <p><strong>Price:</strong> $80 / day</p>
+                    <p><strong>Availability:</strong> Available</p>
+                    <a href="workspaces.html">View Details</a>
+                </article>
+
+                <article class="workspace-card">
+                    <h3>Dedicated Desk</h3>
+                    <p><strong>Neighborhood:</strong> Beltline District</p>
+                    <p><strong>Capacity:</strong> 1 person</p>
+                    <p><strong>Price:</strong> $25 / day</p>
+                    <p><strong>Availability:</strong> Available</p>
+                    <a href="workspaces.html">View Details</a>
+                </article>
+
+                <article class="workspace-card">
+                    <h3>Meeting Room</h3>
+                    <p><strong>Neighborhood:</strong> Kensington</p>
+                    <p><strong>Capacity:</strong> 10 people</p>
+                    <p><strong>Price:</strong> $150 / day</p>
+                    <p><strong>Availability:</strong> Available</p>
+                    <a href="workspaces.html">View Details</a>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <span>SODV1201 Group 1 — Shared Workspace App</span>
+        <span>
+            <a href="../README.md">GitHub Repository</a>
+            |
+            Contact Information
+        </span>
+    </footer>
+</body>
+</html>
