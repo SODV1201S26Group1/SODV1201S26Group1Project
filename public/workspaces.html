@@ -115,10 +115,30 @@
         }
 
         .workspace-item {
+            position: relative;
             border: 1px solid #ddd;
             border-radius: 6px;
             background: #fafafa;
             padding: 14px;
+        }
+
+        .workspace-delete-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 34px;
+            height: 34px;
+            border: 1px solid #5b5bd6;
+            border-radius: 6px;
+            background: white;
+            color: #5b5bd6;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .workspace-delete-icon:hover {
+            background: #f5f5ff;
         }
 
         .workspace-title {
@@ -168,6 +188,61 @@
             color: #444;
         }
 
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 16px;
+            z-index: 1000;
+        }
+
+        .modal.open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 520px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .modal-card h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .modal-form {
+            display: grid;
+            gap: 8px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .modal-actions button {
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid #5b5bd6;
+            background: white;
+            color: #5b5bd6;
+            cursor: pointer;
+        }
+
+        .modal-actions .primary {
+            background: #5b5bd6;
+            color: #fff;
+        }
+
         @media (max-width: 720px) {
             .filters {
                 grid-template-columns: 1fr;
@@ -214,6 +289,49 @@
         </section>
     </div>
 
+    <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+        <div class="modal-card">
+            <h2 id="editModalTitle">Edit Workspace</h2>
+            <div class="modal-form">
+                <label for="editType">Workspace Type</label>
+                <select id="editType">
+                    <option value="Desk">Desk</option>
+                    <option value="Private Office">Private Office</option>
+                    <option value="Meeting Room">Meeting Room</option>
+                </select>
+
+                <label for="editCapacity">Capacity (integer >= 1)</label>
+                <input id="editCapacity" type="number" min="1">
+
+                <label for="editSmoking">Smoking (Yes/No)</label>
+                <select id="editSmoking">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+
+                <label for="editAvailability">Availability (Available/Unavailable)</label>
+                <select id="editAvailability">
+                    <option value="Available">Available</option>
+                    <option value="Unavailable">Unavailable</option>
+                </select>
+
+                <label for="editLeaseTerm">Rental Term (Day/Week/Month)</label>
+                <select id="editLeaseTerm">
+                    <option value="Day">Day</option>
+                    <option value="Week">Week</option>
+                    <option value="Month">Month</option>
+                </select>
+
+                <label for="editPrice">Price (> 0)</label>
+                <input id="editPrice" type="number" min="1">
+            </div>
+            <div class="modal-actions">
+                <button id="editCancelBtn" type="button">Cancel</button>
+                <button id="editSaveBtn" type="button" class="primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
@@ -226,6 +344,7 @@
         }
 
         let workspaces = [];
+        let workspaceBeingEdited = null;
         let messageTimeoutId = null;
 
         function setMessage(text) {
@@ -264,6 +383,8 @@
 
         document.getElementById('typeFilter').addEventListener('change', renderWorkspaces);
         document.getElementById('availabilityFilter').addEventListener('change', renderWorkspaces);
+        document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
+        document.getElementById('editSaveBtn').addEventListener('click', saveWorkspaceEdit);
 
         async function loadWorkspaces() {
             const res = await fetch('/workspaces');
@@ -296,10 +417,12 @@
             filtered.forEach((workspace) => {
                 const item = document.createElement('article');
                 item.className = 'workspace-item';
+                const deleteIcon = ownerMode
+                    ? `<button type="button" class="workspace-delete-icon" data-action="delete" title="Delete Workspace" aria-label="Delete Workspace">&#128465;</button>`
+                    : '';
                 const ownerActions = ownerMode
                     ? `<div class="workspace-actions">
                         <button type="button" data-action="edit">Edit</button>
-                        <button type="button" class="danger" data-action="delete">Delete</button>
                        </div>`
                     : '';
                 const coworkerActions = !ownerMode
@@ -309,6 +432,7 @@
                     : '';
 
                 item.innerHTML = `
+                    ${deleteIcon}
                     <div class="workspace-title">${workspace.type} - ${workspace.address}</div>
                     <div class="workspace-meta">
                         Neighborhood: ${workspace.neighborhood}<br>
@@ -325,7 +449,7 @@
 
                 // Owners can manage listings; coworkers can only contact owners.
                 if (ownerMode) {
-                    item.querySelector('[data-action="edit"]').addEventListener('click', () => editWorkspace(workspace));
+                    item.querySelector('[data-action="edit"]').addEventListener('click', () => openEditModal(workspace));
                     item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteWorkspace(workspace));
                 }
 
@@ -333,21 +457,35 @@
             });
         }
 
-        async function editWorkspace(workspace) {
-            const type = prompt('Workspace Type', workspace.type);
-            if (type === null) return;
-            const capacity = prompt('Capacity (integer >= 1)', workspace.capacity);
-            if (capacity === null) return;
-            const smoking = prompt('Smoking (Yes/No)', workspace.smoking);
-            if (smoking === null) return;
-            const availability = prompt('Availability (Available/Unavailable)', workspace.availability);
-            if (availability === null) return;
-            const leaseTerm = prompt('Rental Term (Day/Week/Month)', workspace.leaseTerm);
-            if (leaseTerm === null) return;
-            const price = prompt('Price (> 0)', workspace.price);
-            if (price === null) return;
+        function openEditModal(workspace) {
+            workspaceBeingEdited = workspace;
+            document.getElementById('editType').value = workspace.type || '';
+            document.getElementById('editCapacity').value = workspace.capacity || '';
+            document.getElementById('editSmoking').value = workspace.smoking || '';
+            document.getElementById('editAvailability').value = workspace.availability || '';
+            document.getElementById('editLeaseTerm').value = workspace.leaseTerm || '';
+            document.getElementById('editPrice').value = workspace.price || '';
+            document.getElementById('editModal').classList.add('open');
+        }
 
-            const res = await fetch(`/workspaces/${workspace.propertyIndex}/${workspace.workspaceIndex}`, {
+        function closeEditModal() {
+            workspaceBeingEdited = null;
+            document.getElementById('editModal').classList.remove('open');
+        }
+
+        async function saveWorkspaceEdit() {
+            if (!workspaceBeingEdited) {
+                return;
+            }
+
+            const type = document.getElementById('editType').value;
+            const capacity = document.getElementById('editCapacity').value;
+            const smoking = document.getElementById('editSmoking').value;
+            const availability = document.getElementById('editAvailability').value;
+            const leaseTerm = document.getElementById('editLeaseTerm').value;
+            const price = document.getElementById('editPrice').value;
+
+            const res = await fetch(`/workspaces/${workspaceBeingEdited.propertyIndex}/${workspaceBeingEdited.workspaceIndex}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, type, capacity, smoking, availability, leaseTerm, price })
@@ -356,6 +494,7 @@
             const data = await res.json();
             setMessage(data.message || 'Workspace update complete.');
             if (data.success) {
+                closeEditModal();
                 loadWorkspaces();
             }
         }
