@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Workspace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f0f0;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        nav h1 {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+            padding: 8px 16px;
+            border-radius: 5px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            padding: 30px;
+        }
+
+        .card {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .card h2 {
+            margin-bottom: 5px;
+            font-size: 22px;
+        }
+
+        .card p.subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        .note {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-save {
+            flex: 1;
+            padding: 14px;
+            background-color: #5b5bd6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .btn-save:hover {
+            background-color: #4a4ac4;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            padding: 14px;
+            background-color: white;
+            color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .btn-cancel:hover {
+            background-color: #f0f0f0;
+        }
+
+        #message {
+            text-align: center;
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h1>Shared Workspace App</h1>
+        <a href="my-properties.html">My Properties</a>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2>Add New Workspace</h2>
+            <p class="subtitle">Owners connect each workspace to one selected property.</p>
+
+            <label>Select Property</label>
+            <select id="propertyIndex">
+                <option value="">Choose a property</option>
+            </select>
+
+            <label>Workspace Type</label>
+            <select id="type">
+                <option value="">Desk / Office / Meeting Room</option>
+                <option value="Desk">Desk</option>
+                <option value="Private Office">Private Office</option>
+                <option value="Meeting Room">Meeting Room</option>
+            </select>
+
+            <label>Capacity</label>
+            <input type="number" id="capacity" placeholder="Enter number of people"/>
+
+            <label>Smoking Allowed</label>
+            <select id="smoking">
+                <option value="">Select: Yes / No</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+            </select>
+
+            <label>Availability</label>
+            <select id="availability">
+                <option value="">Available / Unavailable</option>
+                <option value="Available">Available</option>
+                <option value="Unavailable">Unavailable</option>
+            </select>
+
+            <label>Rental Term</label>
+            <select id="leaseTerm">
+                <option value="">Daily / Weekly / Monthly</option>
+                <option value="Day">Daily</option>
+                <option value="Week">Weekly</option>
+                <option value="Month">Monthly</option>
+            </select>
+
+            <label>Price</label>
+            <input type="number" id="price" placeholder="Enter price amount"/>
+
+            <p class="note">A workspace must be connected to one property.</p>
+
+            <div class="buttons">
+                <button class="btn-save" onclick="addWorkspace()">Save Workspace</button>
+                <button class="btn-cancel" onclick="window.location.href='my-properties.html'">Cancel</button>
+            </div>
+            <p id="message"></p>
+        </div>
+    </div>
+
+    <script>
+        const email = localStorage.getItem('email');
+
+        if (!email) {
+            window.location.href = 'login.html';
+        }
+
+        // Load owner properties into dropdown
+        async function loadProperties() {
+            const res = await fetch('/properties?email=' + email);
+            const data = await res.json();
+            const select = document.getElementById('propertyIndex');
+            data.properties.forEach((p, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = p.address;
+                select.appendChild(option);
+            });
+        }
+
+        async function addWorkspace() {
+            const propertyIndex = document.getElementById('propertyIndex').value;
+            const type = document.getElementById('type').value;
+            const capacity = document.getElementById('capacity').value;
+            const smoking = document.getElementById('smoking').value;
+            const availability = document.getElementById('availability').value;
+            const leaseTerm = document.getElementById('leaseTerm').value;
+            const price = document.getElementById('price').value;
+
+            if (!propertyIndex || !type || !capacity || !smoking || !availability || !leaseTerm || !price) {
+                document.getElementById('message').textContent = 'Please fill in all fields!';
+                return;
+            }
+
+            const res = await fetch('/workspaces', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price })
+            });
+            const data = await res.json();
+            document.getElementById('message').textContent = data.message;
+
+            if (data.success) {
+                window.location.href = 'my-properties.html';
+            }
+        }
+
+        loadProperties();
+    </script>
+</body>
+</html>
