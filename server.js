@@ -63,6 +63,71 @@ app.post('/workspaces', (req, res) => {
     }
 });
 
+app.put('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
+    const { email, type, capacity, smoking, availability, leaseTerm, price } = req.body;
+    const propertyIndex = Number(req.params.propertyIndex);
+    const workspaceIndex = Number(req.params.workspaceIndex);
+
+    if (!Number.isInteger(propertyIndex) || !Number.isInteger(workspaceIndex) || propertyIndex < 0 || workspaceIndex < 0) {
+        return res.json({ success: false, message: 'Invalid workspace selection.' });
+    }
+
+    const property = properties[propertyIndex];
+    if (!property || property.email !== email) {
+        return res.json({ success: false, message: 'Property not found for this owner.' });
+    }
+
+    const normalizedType = (type || '').trim();
+    const normalizedSmoking = (smoking || '').trim();
+    const normalizedAvailability = (availability || '').trim();
+    const normalizedLeaseTerm = (leaseTerm || '').trim();
+    const parsedCapacity = Number(capacity);
+    const parsedPrice = Number(price);
+
+    if (!normalizedType || !Number.isFinite(parsedCapacity) || parsedCapacity < 1 || !normalizedSmoking || !normalizedAvailability || !normalizedLeaseTerm || !Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        return res.json({ success: false, message: 'All workspace fields are required.' });
+    }
+
+    if (!property.workspaces || workspaceIndex >= property.workspaces.length) {
+        return res.json({ success: false, message: 'Workspace not found.' });
+    }
+
+    property.workspaces[workspaceIndex] = {
+        ...property.workspaces[workspaceIndex],
+        type: normalizedType,
+        capacity: parsedCapacity,
+        smoking: normalizedSmoking,
+        availability: normalizedAvailability,
+        leaseTerm: normalizedLeaseTerm,
+        price: parsedPrice,
+        ownerEmail: email
+    };
+
+    res.json({ success: true, message: 'Workspace updated!' });
+});
+
+app.delete('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
+    const { email } = req.body;
+    const propertyIndex = Number(req.params.propertyIndex);
+    const workspaceIndex = Number(req.params.workspaceIndex);
+
+    if (!Number.isInteger(propertyIndex) || !Number.isInteger(workspaceIndex) || propertyIndex < 0 || workspaceIndex < 0) {
+        return res.json({ success: false, message: 'Invalid workspace selection.' });
+    }
+
+    const property = properties[propertyIndex];
+    if (!property || property.email !== email) {
+        return res.json({ success: false, message: 'Property not found for this owner.' });
+    }
+
+    if (!property.workspaces || workspaceIndex >= property.workspaces.length) {
+        return res.json({ success: false, message: 'Workspace not found.' });
+    }   
+
+    property.workspaces.splice(workspaceIndex, 1);
+    res.json({ success: true, message: 'Workspace deleted!' });
+});
+
 app.get('/workspaces', (req, res) => {
     const allWorkspaces = [];
     properties.forEach((p, pIndex) => {
