@@ -214,7 +214,7 @@
             const select = document.getElementById('propertyIndex');
             data.properties.forEach((p, index) => {
                 const option = document.createElement('option');
-                option.value = index;
+                option.value = p.propertyIndex ?? index;
                 option.textContent = p.address;
                 select.appendChild(option);
             });

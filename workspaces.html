@@ -147,6 +147,17 @@
             cursor: pointer;
         }
 
+        .workspace-actions a {
+            display: inline-block;
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid #5b5bd6;
+            background: white;
+            color: #5b5bd6;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
         .workspace-actions .danger {
             border-color: #cc4b4b;
             color: #cc4b4b;
@@ -241,6 +252,7 @@
             document.getElementById('backLink').href = 'my-properties.html';
             document.getElementById('backLink').textContent = 'Back to My Properties';
         } else {
+            document.getElementById('pageSubtitle').textContent = 'Coworker view: browse, filter, and contact workspace owners.';
             document.getElementById('backLink').href = 'index.html';
             document.getElementById('backLink').textContent = 'Back to Dashboard';
         }
@@ -290,6 +302,11 @@
                         <button type="button" class="danger" data-action="delete">Delete</button>
                        </div>`
                     : '';
+                const coworkerActions = !ownerMode
+                    ? `<div class="workspace-actions">
+                        <a href="mailto:${workspace.ownerEmail}?subject=Workspace inquiry: ${encodeURIComponent(workspace.type)}">Contact Owner</a>
+                       </div>`
+                    : '';
 
                 item.innerHTML = `
                     <div class="workspace-title">${workspace.type} - ${workspace.address}</div>
@@ -303,8 +320,10 @@
                         Owner Contact: ${workspace.ownerEmail}
                     </div>
                     ${ownerActions}
+                    ${coworkerActions}
                 `;
 
+                // Owners can manage listings; coworkers can only contact owners.
                 if (ownerMode) {
                     item.querySelector('[data-action="edit"]').addEventListener('click', () => editWorkspace(workspace));
                     item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteWorkspace(workspace));
