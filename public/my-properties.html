@@ -308,6 +308,11 @@
                 }
 
                 data.properties.forEach((property, index) => {
+                    const propertyIndexForLinks =
+                        property.propertyIndex !== undefined
+                            ? property.propertyIndex
+                            : index;
+
                     list.innerHTML += `
                         <article class="property-card">
                             <button
@@ -361,7 +366,7 @@
                                 <button
                                     class="filled-button"
                                     onclick="window.location.href=
-                                    'add-workspace.html?propertyIndex=${index}'"
+                                    'add-workspace.html?propertyIndex=${propertyIndexForLinks}'"
                                 >
                                     Add Workspace
                                 </button>
@@ -369,7 +374,7 @@
                                 <button
                                     class="filled-button"
                                     onclick="window.location.href=
-                                    'workspaces.html?propertyIndex=${index}'"
+                                    'workspaces.html?propertyIndex=${propertyIndexForLinks}'"
                                 >
                                     View Workspaces
                                 </button>

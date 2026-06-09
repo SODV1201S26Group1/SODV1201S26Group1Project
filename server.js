@@ -41,7 +41,9 @@ app.post('/properties', (req, res) => {
 
 app.get('/properties', (req, res) => {
     const { email } = req.query;
-    const userProperties = properties.filter(p => p.email === email);
+    const userProperties = properties
+        .map((property, propertyIndex) => ({ ...property, propertyIndex }))
+        .filter(property => property.email === email);
     res.json({ success: true, properties: userProperties });
 });
 
@@ -60,12 +62,22 @@ app.delete('/properties/:index', (req, res) => {
 
 app.post('/workspaces', (req, res) => {
     const { email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price } = req.body;
-    const userProperties = properties.filter(p => p.email === email);
-    if (propertyIndex >= 0 && propertyIndex < userProperties.length) {
-        userProperties[propertyIndex].workspaces.push({ type, capacity, smoking, availability, leaseTerm, price, ownerEmail: email });
+    const parsedPropertyIndex = Number(propertyIndex);
+
+    if (!Number.isInteger(parsedPropertyIndex) || parsedPropertyIndex < 0 || parsedPropertyIndex >= properties.length) {
+        return res.json({ success: false, message: 'Property not found' });
+    }
+
+    const property = properties[parsedPropertyIndex];
+    if (!property || property.email !== email) {
+        return res.json({ success: false, message: 'Property not found for this owner.' });
+    }
+
+    if (type && capacity && smoking && availability && leaseTerm && price) {
+        property.workspaces.push({ type, capacity, smoking, availability, leaseTerm, price, ownerEmail: email });
         res.json({ success: true, message: 'Workspace added!' });
     } else {
-        res.json({ success: false, message: 'Property not found' });
+        res.json({ success: false, message: 'Please fill in all required workspace fields.' });
     }
 });
 
