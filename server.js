@@ -16,6 +16,8 @@ const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}
 const loginAttempts = new Map();
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
+// Issue #16: local incremental id for in-memory property records.
+let nextPropertyId = 1;
 
 const isValidPassword = (value) => passwordPattern.test(String(value || ''));
 
@@ -23,6 +25,7 @@ function resetState() {
     users.length = 0;
     properties.length = 0;
     loginAttempts.clear();
+    nextPropertyId = 1;
 }
 
 app.use(express.json());
@@ -101,8 +104,28 @@ app.post('/login', async (req, res) => {
 
 app.post('/properties', (req, res) => {
     const { email, address, neighborhood, squareFootage, garage, publicTransport } = req.body;
+    // Issue #16: normalize and validate required property record fields.
     const normalizedEmail = normalizeEmail(email);
-    properties.push({ email: normalizedEmail, address, neighborhood, squareFootage, garage, publicTransport, workspaces: [] });
+    const normalizedAddress = (address || '').trim();
+    const normalizedNeighborhood = (neighborhood || '').trim();
+    const parsedSquareFootage = Number(squareFootage);
+
+    if (!normalizedEmail || !normalizedAddress || !normalizedNeighborhood || !Number.isInteger(parsedSquareFootage) || parsedSquareFootage < 1 || !garage || !publicTransport) {
+        return res.json({ success: false, message: 'All property fields are required.' });
+    }
+
+    // Issue #16: save property and owner identifiers with required details.
+    properties.push({
+        propertyId: nextPropertyId++,
+        ownerId: normalizedEmail,
+        email: normalizedEmail,
+        address: normalizedAddress,
+        neighborhood: normalizedNeighborhood,
+        squareFootage: parsedSquareFootage,
+        garage,
+        publicTransport,
+        workspaces: []
+    });
     res.json({ success: true, message: 'Property added!' });
 });
 
