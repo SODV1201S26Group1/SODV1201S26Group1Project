@@ -4,59 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shared Workspace App</title>
+    <link rel="stylesheet" href="styles.css">
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
         body {
             background-color: white;
-            color: #222;
         }
 
         nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             padding: 15px 30px;
-            background-color: white;
-            border-bottom: 1px solid #ddd;
-        }
-
-        nav h1 {
-            font-size: 18px;
-            font-weight: bold;
         }
 
         .nav-links {
-            display: flex;
-            align-items: center;
             gap: 20px;
         }
 
         .nav-links a {
             color: #222;
-            text-decoration: none;
             font-size: 14px;
         }
 
-        .nav-links .btn-outline {
-            color: #5b5bd6;
-            border: 1px solid #5b5bd6;
-            padding: 8px 16px;
-            border-radius: 5px;
-        }
-
+        .nav-links .btn-outline,
         .nav-links .btn-primary {
-            color: white;
-            background-color: #5b5bd6;
-            border: 1px solid #5b5bd6;
             padding: 8px 16px;
-            border-radius: 5px;
         }
 
         .hero {

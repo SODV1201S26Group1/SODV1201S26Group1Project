@@ -1,0 +1,164 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    color: #222;
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: white;
+    border-bottom: 1px solid #ddd;
+}
+
+nav h1 {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+a {
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+}
+
+.nav-links a,
+.nav-links button,
+.nav-actions a,
+.nav-actions button,
+.btn-primary,
+.btn-outline,
+.primary-button,
+.filled-button,
+.outline-button,
+.btn-save,
+.btn-cancel,
+button,
+.actions button,
+.actions a,
+.hero-buttons a,
+.workspace-card a,
+.workspace-actions a {
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.nav-links a,
+.nav-actions a {
+    border: 1px solid #5b5bd6;
+    color: #5b5bd6;
+    background: white;
+    padding: 8px 16px;
+}
+
+.nav-links a.active {
+    background: #5b5bd6;
+    color: #fff;
+}
+
+.btn-primary,
+.primary-button,
+.filled-button,
+.btn-save,
+.hero-buttons .primary,
+.actions button {
+    color: white;
+    background-color: #5b5bd6;
+    border: 1px solid #5b5bd6;
+}
+
+.btn-outline,
+.outline-button,
+.hero-buttons .outline,
+.actions a,
+.workspace-card a,
+.workspace-actions a,
+.nav-actions button,
+.btn-cancel,
+.nav-links button {
+    color: #5b5bd6;
+    background-color: white;
+    border: 1px solid #5b5bd6;
+}
+
+.btn-primary:hover,
+.primary-button:hover,
+.filled-button:hover,
+.btn-save:hover,
+.hero-buttons .primary:hover,
+.actions button:hover {
+    background-color: #4a4ac4;
+}
+
+.btn-outline:hover,
+.outline-button:hover,
+.hero-buttons .outline:hover,
+.actions a:hover,
+.workspace-card a:hover,
+.workspace-actions a:hover,
+.nav-actions a:hover,
+.nav-actions button:hover,
+.btn-cancel:hover,
+.nav-links button:hover,
+.nav-links a:hover {
+    background-color: #f5f5ff;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    color: #333;
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+.card {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.message {
+    font-size: 14px;
+}
+
+@media (max-width: 800px) {
+    nav {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
