@@ -1,0 +1,180 @@
+body {
+    background-color: #f0f0f0;
+}
+
+nav {
+    padding: 15px 30px;
+}
+
+.nav-title {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.nav-subtitle {
+    font-size: 12px;
+    color: #666;
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-actions a,
+.nav-actions button {
+    padding: 8px 12px;
+}
+
+.container {
+    max-width: 980px;
+    margin: 24px auto;
+    padding: 0 16px;
+    display: grid;
+    gap: 14px;
+}
+
+.card {
+    padding: 16px;
+}
+
+.filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.filters label {
+    margin-bottom: 4px;
+}
+
+.filters select {
+    padding: 9px;
+}
+
+.workspace-list {
+    display: grid;
+    gap: 10px;
+}
+
+.workspace-item {
+    position: relative;
+    background: #fafafa;
+    padding: 14px;
+}
+
+.workspace-delete-icon {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    color: #5b5bd6;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.workspace-delete-icon:hover {
+    background: #f5f5ff;
+}
+
+.workspace-title {
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.workspace-meta {
+    line-height: 1.45;
+    color: #444;
+}
+
+.workspace-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.workspace-actions button,
+.workspace-actions a {
+    padding: 8px 10px;
+    color: #5b5bd6;
+}
+
+.workspace-actions .danger {
+    border-color: #cc4b4b;
+    color: #cc4b4b;
+}
+
+#message {
+    color: #444;
+}
+
+.modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 16px;
+    z-index: 1000;
+}
+
+.modal.open {
+    display: flex;
+}
+
+.modal-card {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.modal-card h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.modal-form {
+    display: grid;
+    gap: 8px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.modal-actions button {
+    padding: 8px 10px;
+    color: #5b5bd6;
+}
+
+.modal-actions .primary {
+    background: #5b5bd6;
+    color: #fff;
+}
+
+.modal-note {
+    color: #444;
+    margin-bottom: 10px;
+}
+
+.modal-actions .danger {
+    background: #5b5bd6;
+    border-color: #5b5bd6;
+    color: #fff;
+}
+
+@media (max-width: 720px) {
+    .filters {
+        grid-template-columns: 1fr;
+    }
+}

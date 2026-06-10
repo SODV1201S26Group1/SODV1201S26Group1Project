@@ -4,53 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Workspace</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
         body {
             background-color: #f0f0f0;
         }
 
         nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             padding: 15px 30px;
-            background-color: white;
-            border-bottom: 1px solid #ddd;
-        }
-
-        nav h1 {
-            font-size: 18px;
-            font-weight: bold;
         }
 
         nav a {
-            text-decoration: none;
-            color: #5b5bd6;
-            border: 1px solid #5b5bd6;
             padding: 8px 16px;
-            border-radius: 5px;
         }
 
         .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 90vh;
             padding: 30px;
         }
 
         .card {
-            background-color: white;
             padding: 40px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
             width: 100%;
             max-width: 500px;
         }
@@ -62,31 +36,15 @@
 
         .card p.subtitle {
             color: #666;
-            font-size: 14px;
             margin-bottom: 20px;
             padding-bottom: 15px;
             border-bottom: 1px solid #ddd;
         }
 
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
         input, select {
-            width: 100%;
             padding: 12px;
             margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 14px;
             color: #333;
-        }
-
-        input::placeholder {
-            color: #aaa;
         }
 
         .note {
@@ -104,37 +62,19 @@
         .btn-save {
             flex: 1;
             padding: 14px;
-            background-color: #5b5bd6;
-            color: white;
-            border: none;
-            border-radius: 5px;
             font-size: 16px;
-            cursor: pointer;
-        }
-
-        .btn-save:hover {
-            background-color: #4a4ac4;
         }
 
         .btn-cancel {
             flex: 1;
             padding: 14px;
-            background-color: white;
             color: #5b5bd6;
-            border: 1px solid #5b5bd6;
-            border-radius: 5px;
             font-size: 16px;
-            cursor: pointer;
-        }
-
-        .btn-cancel:hover {
-            background-color: #f0f0f0;
         }
 
         #message {
             text-align: center;
             color: red;
-            margin-top: 10px;
         }
     </style>
 </head>
@@ -212,9 +152,13 @@
             const res = await fetch('/properties?email=' + email);
             const data = await res.json();
             const select = document.getElementById('propertyIndex');
-            data.properties.forEach((p, index) => {
+            data.properties.forEach((p) => {
+                if (p.propertyIndex === undefined || p.propertyIndex === null) {
+                    return;
+                }
+
                 const option = document.createElement('option');
-                option.value = index;
+                option.value = p.propertyIndex;
                 option.textContent = p.address;
                 select.appendChild(option);
             });

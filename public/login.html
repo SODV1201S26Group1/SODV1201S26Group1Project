@@ -4,52 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
         body {
             background-color: #f0f0f0;
         }
 
         nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             padding: 15px 30px;
-            background-color: white;
-            border-bottom: 1px solid #ddd;
-        }
-
-        nav h1 {
-            font-size: 18px;
-            font-weight: bold;
         }
 
         nav a {
-            text-decoration: none;
-            color: white;
-            background-color: #5b5bd6;
-            padding: 8px 16px;
+            color: #5b5bd6;
+            background-color: #fff;
+            border: 1px solid #5b5bd6;
             border-radius: 5px;
+            padding: 8px 16px;
+        }
+
+        nav a:hover {
+            background: #f5f5ff;
         }
 
         .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 90vh;
         }
 
         .card {
-            background-color: white;
             padding: 40px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
             width: 100%;
             max-width: 450px;
         }
@@ -67,32 +49,43 @@
             font-size: 14px;
         }
 
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
         input {
-            width: 100%;
             padding: 12px;
             margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 14px;
-            color: #333;
         }
 
-        input::placeholder {
-            color: #aaa;
+        .password-field {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .password-field input {
+            margin-bottom: 0;
+            padding-right: 72px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: auto;
+            padding: 6px 10px;
+            margin: 0;
+            font-size: 12px;
+            color: #5b5bd6;
+            background: #fff;
+            border: 1px solid #5b5bd6;
+            border-radius: 5px;
+        }
+
+        .toggle-password:hover {
+            background: #f5f5ff;
         }
 
         #message {
             background-color: #f0f0f0;
             padding: 10px;
-            border-radius: 5px;
-            font-size: 14px;
             color: #333;
             margin-bottom: 15px;
             text-align: center;
@@ -101,22 +94,22 @@
         button {
             width: 100%;
             padding: 14px;
-            background-color: #5b5bd6;
-            color: white;
-            border: none;
-            border-radius: 5px;
             font-size: 16px;
-            cursor: pointer;
         }
 
-        button:hover {
+        .primary-action {
+            color: #fff;
+            background-color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+        }
+
+        .primary-action:hover {
             background-color: #4a4ac4;
         }
 
         .register-link {
             text-align: center;
             margin-top: 15px;
-            font-size: 14px;
         }
 
         .register-link a {
@@ -140,11 +133,21 @@
             <input type="email" id="email" placeholder="Enter your email or username"/>
 
             <label>Password</label>
-            <input type="password" id="password" placeholder="Enter your password"/>
+            <div class="password-field">
+                <input type="password" id="password" placeholder="Enter your password"/>
+                <button
+                    type="button"
+                    class="toggle-password"
+                    id="toggleLoginPassword"
+                    aria-label="Show password"
+                >
+                    Show
+                </button>
+            </div>
 
             <p id="message"></p>
 
-            <button onclick="login()">Login</button>
+            <button class="primary-action" onclick="login()">Login</button>
 
             <div class="register-link">
                 <p>No account? <a href="register.html">Register</a></p>
@@ -153,6 +156,25 @@
     </div>
 
     <script>
+        function setupPasswordToggle(toggleId, inputId) {
+            const toggleButton = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+
+            // Always start hidden with a Show control.
+            input.type = 'password';
+            toggleButton.textContent = 'Show';
+            toggleButton.setAttribute('aria-label', 'Show password');
+
+            toggleButton.addEventListener('click', () => {
+                const isHidden = input.type === 'password';
+                input.type = isHidden ? 'text' : 'password';
+                toggleButton.textContent = isHidden ? 'Hide' : 'Show';
+                toggleButton.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            });
+        }
+
+        setupPasswordToggle('toggleLoginPassword', 'password');
+
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;

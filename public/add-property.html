@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Property</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background: #f4f5f7;
+            color: #222;
+        }
+
+        nav {
+            padding: 14px 24px;
+        }
+
+        .nav-links {
+            gap: 10px;
+        }
+
+        .nav-links a,
+        .nav-links button {
+            padding: 7px 11px;
+        }
+
+        .nav-links a.active {
+            background: #5b5bd6;
+            color: #fff;
+        }
+
+        main {
+            max-width: 760px;
+            margin: 30px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            padding: 18px;
+        }
+
+        h2 {
+            margin-bottom: 8px;
+        }
+
+        .intro {
+            color: #555;
+            margin-bottom: 14px;
+        }
+
+        form {
+            display: grid;
+            gap: 12px;
+        }
+
+        input,
+        select {
+            padding: 9px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .actions button,
+        .actions a {
+            padding: 9px 12px;
+        }
+
+        .actions a {
+            background: #fff;
+            color: #5b5bd6;
+        }
+
+        #message {
+            margin-top: 10px;
+            min-height: 18px;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h1>Shared Workspace App</h1>
+        <div class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="my-properties.html">My Properties</a>
+            <a href="add-property.html" class="active">Add Property</a>
+            <button id="logoutBtn" type="button">Logout</button>
+        </div>
+    </nav>
+
+    <main>
+        <section class="card">
+            <h2>Add New Property</h2>
+            <p class="intro">Create a new property listing before adding workspaces.</p>
+
+            <form id="propertyForm">
+                <div>
+                    <label for="address">Address</label>
+                    <input id="address" name="address" type="text" required>
+                </div>
+
+                <div>
+                    <label for="neighborhood">Neighborhood</label>
+                    <input id="neighborhood" name="neighborhood" type="text" required>
+                </div>
+
+                <div>
+                    <label for="squareFootage">Square Footage</label>
+                    <input id="squareFootage" name="squareFootage" type="number" min="1" required>
+                </div>
+
+                <div>
+                    <label for="garage">Garage</label>
+                    <select id="garage" name="garage" required>
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="publicTransport">Public Transport Nearby</label>
+                    <select id="publicTransport" name="publicTransport" required>
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="actions">
+                    <button type="submit">Save Property</button>
+                    <a href="my-properties.html">Cancel</a>
+                </div>
+            </form>
+
+            <p id="message"></p>
+        </section>
+    </main>
+
+    <script>
+        const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+
+        if (!email || role !== 'owner') {
+            window.location.replace('login.html');
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
+
+        document.getElementById('propertyForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const payload = {
+                email,
+                address: document.getElementById('address').value.trim(),
+                neighborhood: document.getElementById('neighborhood').value.trim(),
+                squareFootage: document.getElementById('squareFootage').value,
+                garage: document.getElementById('garage').value,
+                publicTransport: document.getElementById('publicTransport').value
+            };
+
+            const message = document.getElementById('message');
+            message.textContent = '';
+
+            if (!payload.address || !payload.neighborhood || !payload.squareFootage || !payload.garage || !payload.publicTransport) {
+                message.textContent = 'Please complete all fields.';
+                return;
+            }
+
+            const res = await fetch('/properties', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            message.textContent = data.message || (data.success ? 'Property added.' : 'Could not add property.');
+
+            if (data.success) {
+                setTimeout(() => {
+                    window.location.href = 'my-properties.html';
+                }, 600);
+            }
+        });
+    </script>
+</body>
+</html>

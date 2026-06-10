@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Available Workspaces</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="workspaces.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-title">
+            <h1 id="pageTitle">Available Workspaces</h1>
+            <p id="pageSubtitle" class="nav-subtitle"></p>
+        </div>
+        <div class="nav-actions">
+            <a id="backLink" href="index.html">Back</a>
+            <button id="logoutBtn" type="button">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section class="card filters">
+            <div>
+                <label for="typeFilter">Workspace Type</label>
+                <select id="typeFilter">
+                    <option value="">All</option>
+                    <option value="Desk">Desk</option>
+                    <option value="Private Office">Private Office</option>
+                    <option value="Meeting Room">Meeting Room</option>
+                </select>
+            </div>
+            <div>
+                <label for="availabilityFilter">Availability</label>
+                <select id="availabilityFilter">
+                    <option value="">All</option>
+                    <option value="Available">Available</option>
+                    <option value="Unavailable">Unavailable</option>
+                </select>
+            </div>
+        </section>
+
+        <section class="card">
+            <p id="message" role="status" aria-live="polite" aria-atomic="true"></p>
+            <div id="workspaceList" class="workspace-list"></div>
+        </section>
+    </div>
+
+    <div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+        <div class="modal-card">
+            <h2 id="editModalTitle">Edit Workspace</h2>
+            <div class="modal-form">
+                <label for="editType">Workspace Type</label>
+                <select id="editType">
+                    <option value="Desk">Desk</option>
+                    <option value="Private Office">Private Office</option>
+                    <option value="Meeting Room">Meeting Room</option>
+                </select>
+
+                <label for="editCapacity">Capacity (integer >= 1)</label>
+                <input id="editCapacity" type="number" min="1">
+
+                <label for="editSmoking">Smoking (Yes/No)</label>
+                <select id="editSmoking">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+
+                <label for="editAvailability">Availability (Available/Unavailable)</label>
+                <select id="editAvailability">
+                    <option value="Available">Available</option>
+                    <option value="Unavailable">Unavailable</option>
+                </select>
+
+                <label for="editLeaseTerm">Rental Term (Day/Week/Month)</label>
+                <select id="editLeaseTerm">
+                    <option value="Day">Day</option>
+                    <option value="Week">Week</option>
+                    <option value="Month">Month</option>
+                </select>
+
+                <label for="editPrice">Price (> 0)</label>
+                <input id="editPrice" type="number" min="1">
+            </div>
+            <div class="modal-actions">
+                <button id="editCancelBtn" type="button">Cancel</button>
+                <button id="editSaveBtn" type="button" class="primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+        <div class="modal-card">
+            <h2 id="deleteModalTitle">Delete Workspace</h2>
+            <p class="modal-note">Are you sure you want to delete this workspace? This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button id="deleteCancelBtn" type="button">Cancel</button>
+                <button id="deleteConfirmBtn" type="button" class="danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+        const params = new URLSearchParams(window.location.search);
+        const selectedPropertyIndex = params.get('propertyIndex');
+        const ownerMode = role === 'owner' && selectedPropertyIndex !== null;
+
+        if (!email) {
+            window.location.href = 'login.html';
+        }
+
+        let workspaces = [];
+        let workspaceBeingEdited = null;
+        let workspacePendingDelete = null;
+        let messageTimeoutId = null;
+
+        function setMessage(text) {
+            const element = document.getElementById('message');
+            element.textContent = text || '';
+
+            if (messageTimeoutId) {
+                clearTimeout(messageTimeoutId);
+                messageTimeoutId = null;
+            }
+
+            if (text) {
+                messageTimeoutId = setTimeout(() => {
+                    element.textContent = '';
+                    messageTimeoutId = null;
+                }, 3000);
+            }
+        }
+
+        if (ownerMode) {
+            document.getElementById('pageTitle').textContent = 'Manage Workspaces';
+            document.getElementById('pageSubtitle').textContent = 'Owner controls: edit and delete workspaces for the selected property.';
+            document.getElementById('typeFilter').closest('.card').style.display = 'none';
+            document.getElementById('backLink').href = 'my-properties.html';
+            document.getElementById('backLink').textContent = 'Back to My Properties';
+        } else {
+            document.getElementById('pageSubtitle').textContent = 'Coworker view: browse, filter, and contact workspace owners.';
+            document.getElementById('backLink').href = 'index.html';
+            document.getElementById('backLink').textContent = 'Back to Dashboard';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
+
+        document.getElementById('typeFilter').addEventListener('change', renderWorkspaces);
+        document.getElementById('availabilityFilter').addEventListener('change', renderWorkspaces);
+        document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
+        document.getElementById('editSaveBtn').addEventListener('click', saveWorkspaceEdit);
+        document.getElementById('deleteCancelBtn').addEventListener('click', closeDeleteModal);
+        document.getElementById('deleteConfirmBtn').addEventListener('click', confirmDeleteWorkspace);
+
+        async function loadWorkspaces() {
+            const res = await fetch('/workspaces');
+            const data = await res.json();
+            workspaces = data.success ? data.workspaces : [];
+            renderWorkspaces();
+        }
+
+        function renderWorkspaces() {
+            const type = document.getElementById('typeFilter').value;
+            const availability = document.getElementById('availabilityFilter').value;
+
+            const filtered = workspaces.filter((workspace) => {
+                if (ownerMode) {
+                    return workspace.ownerEmail === email && String(workspace.propertyIndex) === String(selectedPropertyIndex);
+                }
+
+                const matchesType = !type || workspace.type === type;
+                const matchesAvailability = !availability || workspace.availability === availability;
+                return matchesType && matchesAvailability;
+            });
+
+            const list = document.getElementById('workspaceList');
+            if (!filtered.length) {
+                list.innerHTML = '<p>No workspaces match your filters.</p>';
+                return;
+            }
+
+            list.innerHTML = '';
+            filtered.forEach((workspace) => {
+                const item = document.createElement('article');
+                item.className = 'workspace-item';
+
+                if (ownerMode) {
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'workspace-delete-icon';
+                    deleteButton.title = 'Delete Workspace';
+                    deleteButton.setAttribute('aria-label', 'Delete Workspace');
+                    deleteButton.textContent = '🗑';
+                    deleteButton.addEventListener('click', () => openDeleteModal(workspace));
+                    item.appendChild(deleteButton);
+                }
+
+                const title = document.createElement('div');
+                title.className = 'workspace-title';
+                title.textContent = `${workspace.type} - ${workspace.address}`;
+                item.appendChild(title);
+
+                const meta = document.createElement('div');
+                meta.className = 'workspace-meta';
+
+                const metaLines = [
+                    `Neighborhood: ${workspace.neighborhood}`,
+                    `Capacity: ${workspace.capacity}`,
+                    `Smoking: ${workspace.smoking}`,
+                    `Availability: ${workspace.availability}`,
+                    `Term: ${workspace.leaseTerm}`,
+                    `Price: $${workspace.price}`,
+                    `Owner Contact: ${workspace.ownerEmail}`
+                ];
+
+                metaLines.forEach((line, lineIndex) => {
+                    if (lineIndex > 0) {
+                        meta.appendChild(document.createElement('br'));
+                    }
+                    meta.appendChild(document.createTextNode(line));
+                });
+
+                item.appendChild(meta);
+
+                const actions = document.createElement('div');
+                actions.className = 'workspace-actions';
+
+                // Owners can manage listings; coworkers can only contact owners.
+                if (ownerMode) {
+                    const editButton = document.createElement('button');
+                    editButton.type = 'button';
+                    editButton.textContent = 'Edit';
+                    editButton.addEventListener('click', () => openEditModal(workspace));
+                    actions.appendChild(editButton);
+                } else {
+                    const contactLink = document.createElement('a');
+                    contactLink.textContent = 'Contact Owner';
+                    contactLink.href = `mailto:${workspace.ownerEmail}?subject=${encodeURIComponent(`Workspace inquiry: ${workspace.type}`)}`;
+                    actions.appendChild(contactLink);
+                }
+
+                item.appendChild(actions);
+
+                list.appendChild(item);
+            });
+        }
+
+        function openEditModal(workspace) {
+            workspaceBeingEdited = workspace;
+            document.getElementById('editType').value = workspace.type || '';
+            document.getElementById('editCapacity').value = workspace.capacity || '';
+            document.getElementById('editSmoking').value = workspace.smoking || '';
+            document.getElementById('editAvailability').value = workspace.availability || '';
+            document.getElementById('editLeaseTerm').value = workspace.leaseTerm || '';
+            document.getElementById('editPrice').value = workspace.price || '';
+            document.getElementById('editModal').classList.add('open');
+        }
+
+        function closeEditModal() {
+            workspaceBeingEdited = null;
+            document.getElementById('editModal').classList.remove('open');
+        }
+
+        async function saveWorkspaceEdit() {
+            if (!workspaceBeingEdited) {
+                return;
+            }
+
+            const type = document.getElementById('editType').value;
+            const capacity = document.getElementById('editCapacity').value;
+            const smoking = document.getElementById('editSmoking').value;
+            const availability = document.getElementById('editAvailability').value;
+            const leaseTerm = document.getElementById('editLeaseTerm').value;
+            const price = document.getElementById('editPrice').value;
+
+            const res = await fetch(`/workspaces/${workspaceBeingEdited.propertyIndex}/${workspaceBeingEdited.workspaceIndex}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, type, capacity, smoking, availability, leaseTerm, price })
+            });
+
+            const data = await res.json();
+            setMessage(data.message || 'Workspace update complete.');
+            if (data.success) {
+                closeEditModal();
+                loadWorkspaces();
+            }
+        }
+
+        async function deleteWorkspace(workspace) {
+            const res = await fetch(`/workspaces/${workspace.propertyIndex}/${workspace.workspaceIndex}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json();
+            setMessage(data.message || 'Workspace delete complete.');
+            if (data.success) {
+                loadWorkspaces();
+            }
+        }
+
+        function openDeleteModal(workspace) {
+            workspacePendingDelete = workspace;
+            document.getElementById('deleteModal').classList.add('open');
+        }
+
+        function closeDeleteModal() {
+            workspacePendingDelete = null;
+            document.getElementById('deleteModal').classList.remove('open');
+        }
+
+        async function confirmDeleteWorkspace() {
+            if (!workspacePendingDelete) {
+                return;
+            }
+
+            const workspaceToDelete = workspacePendingDelete;
+            closeDeleteModal();
+            await deleteWorkspace(workspaceToDelete);
+        }
+
+        loadWorkspaces();
+    </script>
+</body>
+</html>

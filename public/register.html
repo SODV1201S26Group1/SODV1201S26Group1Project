@@ -4,52 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
         body {
             background-color: #f0f0f0;
         }
 
         nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             padding: 15px 30px;
-            background-color: white;
-            border-bottom: 1px solid #ddd;
-        }
-
-        nav h1 {
-            font-size: 18px;
-            font-weight: bold;
         }
 
         nav a {
-            text-decoration: none;
             color: #5b5bd6;
+            background-color: #fff;
             border: 1px solid #5b5bd6;
-            padding: 8px 16px;
             border-radius: 5px;
+            padding: 8px 16px;
+        }
+
+        nav a:hover {
+            background: #f5f5ff;
         }
 
         .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 90vh;
         }
 
         .card {
-            background-color: white;
             padding: 40px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
             width: 100%;
             max-width: 450px;
         }
@@ -60,47 +42,68 @@
             font-size: 24px;
         }
 
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-
         input, select {
-            width: 100%;
             padding: 12px;
             margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 14px;
-            color: #333;
         }
 
-        input::placeholder {
-            color: #aaa;
+        .password-field {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .password-field input {
+            margin-bottom: 0;
+            padding-right: 72px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: auto;
+            padding: 6px 10px;
+            margin: 0;
+            font-size: 12px;
+            color: #5b5bd6;
+            background: #fff;
+            border: 1px solid #5b5bd6;
+            border-radius: 5px;
+        }
+
+        .toggle-password:hover {
+            background: #f5f5ff;
+        }
+
+        .password-note {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
         }
 
         button {
             width: 100%;
             padding: 14px;
-            background-color: #5b5bd6;
-            color: white;
-            border: none;
-            border-radius: 5px;
             font-size: 16px;
-            cursor: pointer;
             margin-top: 5px;
         }
 
-        button:hover {
+        .primary-action {
+            color: #fff;
+            background-color: #5b5bd6;
+            border: 1px solid #5b5bd6;
+        }
+
+        .primary-action:hover {
             background-color: #4a4ac4;
         }
 
         .login-link {
             text-align: center;
             margin-top: 15px;
-            font-size: 14px;
         }
 
         .login-link a {
@@ -135,10 +138,34 @@
             <input type="email" id="email" placeholder="Enter your email or username"/>
 
             <label>Password</label>
-            <input type="password" id="password" placeholder="Enter your password"/>
+            <div class="password-field">
+                <input type="password" id="password" placeholder="Enter your password"/>
+                <button
+                    type="button"
+                    class="toggle-password"
+                    id="toggleRegisterPassword"
+                    aria-label="Show password"
+                >
+                    Show
+                </button>
+            </div>
+            <p class="password-note">
+                Password must be at least 8 characters and include 1 uppercase letter,
+                1 lowercase letter, 1 number, and 1 special character.
+            </p>
 
             <label>Confirm Password</label>
-            <input type="password" id="confirmPassword" placeholder="Re-enter your password"/>
+            <div class="password-field">
+                <input type="password" id="confirmPassword" placeholder="Re-enter your password"/>
+                <button
+                    type="button"
+                    class="toggle-password"
+                    id="toggleConfirmPassword"
+                    aria-label="Show confirm password"
+                >
+                    Show
+                </button>
+            </div>
 
             <label>Role</label>
             <select id="role">
@@ -147,7 +174,7 @@
                 <option value="coworker">Coworker</option>
             </select>
 
-            <button onclick="register()">Register</button>
+            <button class="primary-action" onclick="register()">Register</button>
             <p id="message"></p>
 
             <div class="login-link">
@@ -157,6 +184,28 @@
     </div>
 
     <script>
+        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}$/;
+
+        function setupPasswordToggle(toggleId, inputId) {
+            const toggleButton = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+
+            // Always start hidden with a Show control.
+            input.type = 'password';
+            toggleButton.textContent = 'Show';
+            toggleButton.setAttribute('aria-label', 'Show password');
+
+            toggleButton.addEventListener('click', () => {
+                const isHidden = input.type === 'password';
+                input.type = isHidden ? 'text' : 'password';
+                toggleButton.textContent = isHidden ? 'Hide' : 'Show';
+                toggleButton.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            });
+        }
+
+        setupPasswordToggle('toggleRegisterPassword', 'password');
+        setupPasswordToggle('toggleConfirmPassword', 'confirmPassword');
+
         async function register() {
             const name = document.getElementById('name').value;
             const phone = document.getElementById('phone').value;
@@ -167,6 +216,11 @@
 
             if (password !== confirmPassword) {
                 document.getElementById('message').textContent = 'Passwords do not match!';
+                return;
+            }
+
+            if (!passwordPattern.test(password)) {
+                document.getElementById('message').textContent = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
                 return;
             }
 
