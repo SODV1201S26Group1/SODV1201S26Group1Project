@@ -4,10 +4,12 @@ GitHub Copilot was used to help draft code, explain parts of the assignment by d
 Technical background: PLC programming and robotics systems.
 */
 
+// ─── Dependencies ───────────────────────────────────────────────────────────
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const app = express();
 
+// ─── In-Memory Data Store ────────────────────────────────────────────────────
 const users = [];
 const properties = [];
 const contactMessages = [];
@@ -22,6 +24,7 @@ let nextPropertyId = 1;
 
 const isValidPassword = (value) => passwordPattern.test(String(value || ''));
 
+// ─── Test Helper (resets state between test runs) ────────────────────────────
 function resetState() {
     users.length = 0;
     properties.length = 0;
@@ -29,9 +32,11 @@ function resetState() {
     nextPropertyId = 1;
 }
 
+// ─── Middleware ─────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.static('public'));
 
+// ─── Auth Routes ─────────────────────────────────────────────────────────────
 app.post('/register', async (req, res) => {
     const { name, phone, email, password, role } = req.body;
     const normalizedEmail = normalizeEmail(email);
@@ -103,6 +108,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// ─── Property Routes ────────────────────────────────────────────────────────
 app.post('/properties', (req, res) => {
     const { email, address, neighborhood, squareFootage, garage, publicTransport } = req.body;
     // Issue #16: normalize and validate required property record fields.
@@ -156,6 +162,7 @@ app.delete('/properties/:index', (req, res) => {
     }
 });
 
+// ─── Workspace Routes ───────────────────────────────────────────────────────
 app.post('/workspaces', (req, res) => {
     const { email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price } = req.body;
     const normalizedEmail = normalizeEmail(email);
@@ -254,6 +261,7 @@ app.get('/workspaces', (req, res) => {
     res.json({ success: true, workspaces: allWorkspaces });
 });
 
+// ─── Contact Message Routes (Issue #23) ─────────────────────────────────────
 app.post('/messages', (req, res) => {
     const {
         fromEmail,
@@ -290,6 +298,7 @@ app.post('/messages', (req, res) => {
     return res.json({ success: true, message: 'Message sent to owner.' });
 });
 
+// ─── Server Start ───────────────────────────────────────────────────────────
 if (require.main === module) {
     app.listen(3000, () => {
         console.log('Server running on port 3000');
