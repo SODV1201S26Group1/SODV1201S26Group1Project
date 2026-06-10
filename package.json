@@ -4,7 +4,7 @@
   "description": "Group 1 final project repository for SODV1201 Web Programming, Spring 2026 at Bow Valley College.",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test",
     "start": "node server.js"
   },
   "repository": {
@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/SODV1201S26Group1/SODV1201S26Group1Project#readme",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "express": "^5.2.1"
   }
 }

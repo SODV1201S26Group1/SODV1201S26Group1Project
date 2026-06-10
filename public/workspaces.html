@@ -4,251 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Available Workspaces</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            background-color: #f0f0f0;
-            color: #222;
-        }
-
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-            background-color: white;
-            border-bottom: 1px solid #ddd;
-        }
-
-        nav h1 {
-            font-size: 18px;
-        }
-
-        .nav-title {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .nav-subtitle {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-actions a {
-            border: 1px solid #5b5bd6;
-            color: #5b5bd6;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .nav-actions a:hover {
-            background-color: #f5f5ff;
-        }
-
-        nav button {
-            border: 1px solid #5b5bd6;
-            color: #5b5bd6;
-            background: white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        nav button:hover {
-            background-color: #f5f5ff;
-        }
-
-        .container {
-            max-width: 980px;
-            margin: 24px auto;
-            padding: 0 16px;
-            display: grid;
-            gap: 14px;
-        }
-
-        .card {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 16px;
-        }
-
-        .filters {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 4px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        select {
-            width: 100%;
-            padding: 9px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        .workspace-list {
-            display: grid;
-            gap: 10px;
-        }
-
-        .workspace-item {
-            position: relative;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            background: #fafafa;
-            padding: 14px;
-        }
-
-        .workspace-delete-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 34px;
-            height: 34px;
-            border: 1px solid #5b5bd6;
-            border-radius: 6px;
-            background: white;
-            color: #5b5bd6;
-            font-size: 18px;
-            line-height: 1;
-            cursor: pointer;
-        }
-
-        .workspace-delete-icon:hover {
-            background: #f5f5ff;
-        }
-
-        .workspace-title {
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        .workspace-meta {
-            font-size: 14px;
-            line-height: 1.45;
-            color: #444;
-        }
-
-        .workspace-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .workspace-actions button {
-            padding: 8px 10px;
-            border-radius: 5px;
-            border: 1px solid #5b5bd6;
-            background: white;
-            color: #5b5bd6;
-            cursor: pointer;
-        }
-
-        .workspace-actions a {
-            display: inline-block;
-            padding: 8px 10px;
-            border-radius: 5px;
-            border: 1px solid #5b5bd6;
-            background: white;
-            color: #5b5bd6;
-            text-decoration: none;
-            font-size: 13px;
-        }
-
-        .workspace-actions .danger {
-            border-color: #cc4b4b;
-            color: #cc4b4b;
-        }
-
-        #message {
-            font-size: 14px;
-            color: #444;
-        }
-
-        .modal {
-            position: fixed;
-            inset: 0;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.35);
-            padding: 16px;
-            z-index: 1000;
-        }
-
-        .modal.open {
-            display: flex;
-        }
-
-        .modal-card {
-            width: 100%;
-            max-width: 520px;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 16px;
-        }
-
-        .modal-card h2 {
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        .modal-form {
-            display: grid;
-            gap: 8px;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-            margin-top: 10px;
-        }
-
-        .modal-actions button {
-            padding: 8px 10px;
-            border-radius: 5px;
-            border: 1px solid #5b5bd6;
-            background: white;
-            color: #5b5bd6;
-            cursor: pointer;
-        }
-
-        .modal-actions .primary {
-            background: #5b5bd6;
-            color: #fff;
-        }
-
-        @media (max-width: 720px) {
-            .filters {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="workspaces.css">
 </head>
 <body>
     <nav>
@@ -284,7 +41,7 @@
         </section>
 
         <section class="card">
-            <p id="message"></p>
+            <p id="message" role="status" aria-live="polite" aria-atomic="true"></p>
             <div id="workspaceList" class="workspace-list"></div>
         </section>
     </div>
@@ -332,6 +89,17 @@
         </div>
     </div>
 
+    <div id="deleteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+        <div class="modal-card">
+            <h2 id="deleteModalTitle">Delete Workspace</h2>
+            <p class="modal-note">Are you sure you want to delete this workspace? This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button id="deleteCancelBtn" type="button">Cancel</button>
+                <button id="deleteConfirmBtn" type="button" class="danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
@@ -345,6 +113,7 @@
 
         let workspaces = [];
         let workspaceBeingEdited = null;
+        let workspacePendingDelete = null;
         let messageTimeoutId = null;
 
         function setMessage(text) {
@@ -385,6 +154,8 @@
         document.getElementById('availabilityFilter').addEventListener('change', renderWorkspaces);
         document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
         document.getElementById('editSaveBtn').addEventListener('click', saveWorkspaceEdit);
+        document.getElementById('deleteCancelBtn').addEventListener('click', closeDeleteModal);
+        document.getElementById('deleteConfirmBtn').addEventListener('click', confirmDeleteWorkspace);
 
         async function loadWorkspaces() {
             const res = await fetch('/workspaces');
@@ -417,41 +188,63 @@
             filtered.forEach((workspace) => {
                 const item = document.createElement('article');
                 item.className = 'workspace-item';
-                const deleteIcon = ownerMode
-                    ? `<button type="button" class="workspace-delete-icon" data-action="delete" title="Delete Workspace" aria-label="Delete Workspace">&#128465;</button>`
-                    : '';
-                const ownerActions = ownerMode
-                    ? `<div class="workspace-actions">
-                        <button type="button" data-action="edit">Edit</button>
-                       </div>`
-                    : '';
-                const coworkerActions = !ownerMode
-                    ? `<div class="workspace-actions">
-                        <a href="mailto:${workspace.ownerEmail}?subject=Workspace inquiry: ${encodeURIComponent(workspace.type)}">Contact Owner</a>
-                       </div>`
-                    : '';
 
-                item.innerHTML = `
-                    ${deleteIcon}
-                    <div class="workspace-title">${workspace.type} - ${workspace.address}</div>
-                    <div class="workspace-meta">
-                        Neighborhood: ${workspace.neighborhood}<br>
-                        Capacity: ${workspace.capacity}<br>
-                        Smoking: ${workspace.smoking}<br>
-                        Availability: ${workspace.availability}<br>
-                        Term: ${workspace.leaseTerm}<br>
-                        Price: $${workspace.price}<br>
-                        Owner Contact: ${workspace.ownerEmail}
-                    </div>
-                    ${ownerActions}
-                    ${coworkerActions}
-                `;
+                if (ownerMode) {
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'workspace-delete-icon';
+                    deleteButton.title = 'Delete Workspace';
+                    deleteButton.setAttribute('aria-label', 'Delete Workspace');
+                    deleteButton.textContent = '🗑';
+                    deleteButton.addEventListener('click', () => openDeleteModal(workspace));
+                    item.appendChild(deleteButton);
+                }
+
+                const title = document.createElement('div');
+                title.className = 'workspace-title';
+                title.textContent = `${workspace.type} - ${workspace.address}`;
+                item.appendChild(title);
+
+                const meta = document.createElement('div');
+                meta.className = 'workspace-meta';
+
+                const metaLines = [
+                    `Neighborhood: ${workspace.neighborhood}`,
+                    `Capacity: ${workspace.capacity}`,
+                    `Smoking: ${workspace.smoking}`,
+                    `Availability: ${workspace.availability}`,
+                    `Term: ${workspace.leaseTerm}`,
+                    `Price: $${workspace.price}`,
+                    `Owner Contact: ${workspace.ownerEmail}`
+                ];
+
+                metaLines.forEach((line, lineIndex) => {
+                    if (lineIndex > 0) {
+                        meta.appendChild(document.createElement('br'));
+                    }
+                    meta.appendChild(document.createTextNode(line));
+                });
+
+                item.appendChild(meta);
+
+                const actions = document.createElement('div');
+                actions.className = 'workspace-actions';
 
                 // Owners can manage listings; coworkers can only contact owners.
                 if (ownerMode) {
-                    item.querySelector('[data-action="edit"]').addEventListener('click', () => openEditModal(workspace));
-                    item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteWorkspace(workspace));
+                    const editButton = document.createElement('button');
+                    editButton.type = 'button';
+                    editButton.textContent = 'Edit';
+                    editButton.addEventListener('click', () => openEditModal(workspace));
+                    actions.appendChild(editButton);
+                } else {
+                    const contactLink = document.createElement('a');
+                    contactLink.textContent = 'Contact Owner';
+                    contactLink.href = `mailto:${workspace.ownerEmail}?subject=${encodeURIComponent(`Workspace inquiry: ${workspace.type}`)}`;
+                    actions.appendChild(contactLink);
                 }
+
+                item.appendChild(actions);
 
                 list.appendChild(item);
             });
@@ -500,9 +293,6 @@
         }
 
         async function deleteWorkspace(workspace) {
-            const shouldDelete = confirm('Delete this workspace?');
-            if (!shouldDelete) return;
-
             const res = await fetch(`/workspaces/${workspace.propertyIndex}/${workspace.workspaceIndex}`, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
@@ -514,6 +304,26 @@
             if (data.success) {
                 loadWorkspaces();
             }
+        }
+
+        function openDeleteModal(workspace) {
+            workspacePendingDelete = workspace;
+            document.getElementById('deleteModal').classList.add('open');
+        }
+
+        function closeDeleteModal() {
+            workspacePendingDelete = null;
+            document.getElementById('deleteModal').classList.remove('open');
+        }
+
+        async function confirmDeleteWorkspace() {
+            if (!workspacePendingDelete) {
+                return;
+            }
+
+            const workspaceToDelete = workspacePendingDelete;
+            closeDeleteModal();
+            await deleteWorkspace(workspaceToDelete);
         }
 
         loadWorkspaces();

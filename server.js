@@ -5,55 +5,127 @@ Technical background: PLC programming and robotics systems.
 */
 
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const app = express();
 
 const users = [];
 const properties = [];
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+const allowedRoles = new Set(['owner', 'coworker']);
+const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}$/;
+const loginAttempts = new Map();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
+
+const isValidPassword = (value) => passwordPattern.test(String(value || ''));
+
+function resetState() {
+    users.length = 0;
+    properties.length = 0;
+    loginAttempts.clear();
+}
 
 app.use(express.json());
 app.use(express.static('public'));
 
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
     const { name, phone, email, password, role } = req.body;
-    const exists = users.find(u => u.email === email);
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedRole = String(role || '').trim().toLowerCase();
+
+    if (!isValidPassword(password)) {
+        return res.json({
+            success: false,
+            message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
+        });
+    }
+
+    if (!allowedRoles.has(normalizedRole)) {
+        return res.json({ success: false, message: 'Invalid role selected' });
+    }
+
+    const exists = users.find(u => normalizeEmail(u.email) === normalizedEmail);
     if (exists) {
         return res.json({ success: false, message: 'Email already registered' });
     }
-    users.push({ name, phone, email, password, role });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    users.push({ name, phone, email: normalizedEmail, password: hashedPassword, role: normalizedRole });
     res.json({ success: true, message: 'User registered!' });
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
+    const normalizedEmail = normalizeEmail(email);
+    const now = Date.now();
+    const attemptRecord = loginAttempts.get(normalizedEmail);
+
+    if (!normalizedEmail || !password) {
+        return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    if (attemptRecord && attemptRecord.lockUntil && attemptRecord.lockUntil > now) {
+        return res.status(429).json({
+            success: false,
+            message: 'Too many failed login attempts. Please try again later.'
+        });
+    }
+
+    if (attemptRecord && attemptRecord.lockUntil && attemptRecord.lockUntil <= now) {
+        loginAttempts.delete(normalizedEmail);
+    }
+
+    const user = users.find(u => normalizeEmail(u.email) === normalizedEmail);
+
+    if (!user) {
+        loginAttempts.set(normalizedEmail, {
+            count: (attemptRecord?.count || 0) + 1,
+            lockUntil: (attemptRecord?.count || 0) + 1 >= MAX_LOGIN_ATTEMPTS ? now + LOGIN_LOCKOUT_MS : null
+        });
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password);
+    if (passwordMatches) {
+        loginAttempts.delete(normalizedEmail);
         res.json({ success: true, role: user.role, name: user.name });
     } else {
-        res.json({ success: false, message: 'Invalid credentials' });
+        const nextCount = (attemptRecord?.count || 0) + 1;
+        loginAttempts.set(normalizedEmail, {
+            count: nextCount,
+            lockUntil: nextCount >= MAX_LOGIN_ATTEMPTS ? now + LOGIN_LOCKOUT_MS : null
+        });
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 });
 
 app.post('/properties', (req, res) => {
     const { email, address, neighborhood, squareFootage, garage, publicTransport } = req.body;
-    properties.push({ email, address, neighborhood, squareFootage, garage, publicTransport, workspaces: [] });
+    const normalizedEmail = normalizeEmail(email);
+    properties.push({ email: normalizedEmail, address, neighborhood, squareFootage, garage, publicTransport, workspaces: [] });
     res.json({ success: true, message: 'Property added!' });
 });
 
 app.get('/properties', (req, res) => {
-    const { email } = req.query;
+    const email = normalizeEmail(req.query.email);
     const userProperties = properties
         .map((property, propertyIndex) => ({ ...property, propertyIndex }))
-        .filter(property => property.email === email);
+        .filter(property => normalizeEmail(property.email) === email);
     res.json({ success: true, properties: userProperties });
 });
 
 app.delete('/properties/:index', (req, res) => {
-    const { email } = req.body;
-    const index = parseInt(req.params.index);
-    const userProperties = properties.filter(p => p.email === email);
-    if (index >= 0 && index < userProperties.length) {
-        const globalIndex = properties.indexOf(userProperties[index]);
-        properties.splice(globalIndex, 1);
+    const email = normalizeEmail(req.body.email);
+    const index = parseInt(req.params.index, 10);
+
+    if (!Number.isInteger(index)) {
+        return res.status(400).json({ success: false, message: 'Invalid property index.' });
+    }
+
+    const property = properties[index];
+
+    if (index >= 0 && property && normalizeEmail(property.email) === email) {
+        properties.splice(index, 1);
         res.json({ success: true });
     } else {
         res.json({ success: false, message: 'Property not found' });
@@ -62,6 +134,7 @@ app.delete('/properties/:index', (req, res) => {
 
 app.post('/workspaces', (req, res) => {
     const { email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price } = req.body;
+    const normalizedEmail = normalizeEmail(email);
     const parsedPropertyIndex = Number(propertyIndex);
 
     if (!Number.isInteger(parsedPropertyIndex) || parsedPropertyIndex < 0 || parsedPropertyIndex >= properties.length) {
@@ -69,12 +142,12 @@ app.post('/workspaces', (req, res) => {
     }
 
     const property = properties[parsedPropertyIndex];
-    if (!property || property.email !== email) {
+    if (!property || normalizeEmail(property.email) !== normalizedEmail) {
         return res.json({ success: false, message: 'Property not found for this owner.' });
     }
 
     if (type && capacity && smoking && availability && leaseTerm && price) {
-        property.workspaces.push({ type, capacity, smoking, availability, leaseTerm, price, ownerEmail: email });
+        property.workspaces.push({ type, capacity, smoking, availability, leaseTerm, price, ownerEmail: normalizedEmail });
         res.json({ success: true, message: 'Workspace added!' });
     } else {
         res.json({ success: false, message: 'Please fill in all required workspace fields.' });
@@ -83,6 +156,7 @@ app.post('/workspaces', (req, res) => {
 
 app.put('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
     const { email, type, capacity, smoking, availability, leaseTerm, price } = req.body;
+    const normalizedEmail = normalizeEmail(email);
     const propertyIndex = Number(req.params.propertyIndex);
     const workspaceIndex = Number(req.params.workspaceIndex);
 
@@ -91,7 +165,7 @@ app.put('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
     }
 
     const property = properties[propertyIndex];
-    if (!property || property.email !== email) {
+    if (!property || normalizeEmail(property.email) !== normalizedEmail) {
         return res.json({ success: false, message: 'Property not found for this owner.' });
     }
 
@@ -118,14 +192,14 @@ app.put('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
         availability: normalizedAvailability,
         leaseTerm: normalizedLeaseTerm,
         price: parsedPrice,
-        ownerEmail: email
+        ownerEmail: normalizedEmail
     };
 
     res.json({ success: true, message: 'Workspace updated!' });
 });
 
 app.delete('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
     const propertyIndex = Number(req.params.propertyIndex);
     const workspaceIndex = Number(req.params.workspaceIndex);
 
@@ -134,7 +208,7 @@ app.delete('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
     }
 
     const property = properties[propertyIndex];
-    if (!property || property.email !== email) {
+    if (!property || normalizeEmail(property.email) !== email) {
         return res.json({ success: false, message: 'Property not found for this owner.' });
     }
 
@@ -156,6 +230,13 @@ app.get('/workspaces', (req, res) => {
     res.json({ success: true, workspaces: allWorkspaces });
 });
 
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
-});
+if (require.main === module) {
+    app.listen(3000, () => {
+        console.log('Server running on port 3000');
+    });
+}
+
+module.exports = {
+    app,
+    resetState
+};
