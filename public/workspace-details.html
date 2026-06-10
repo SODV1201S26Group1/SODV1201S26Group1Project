@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workspace Details</title>
+    <style>
+        html {
+            font-size: 100%;
+        }
+
+        :root {
+            --brand-purple: #5b5bd6;
+            --page-gray: #f0f0f0;
+            --card-border: #c8d0d8;
+            --text-main: #222;
+            --text-muted: #555;
+            --line-gray: #ddd;
+            --status-gray: #f0f2f4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--page-gray);
+            color: var(--text-main);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9375rem 1.875rem;
+            background-color: white;
+            border-bottom: 0.0625rem solid var(--line-gray);
+        }
+
+        nav h1 {
+            font-size: 1.125rem;
+            color: var(--brand-purple);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+        }
+
+        .nav-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand-purple);
+            text-decoration: none;
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border: 0.0625rem solid var(--brand-purple);
+            border-radius: 0.3125rem;
+            background-color: white;
+            min-height: 2.25rem;
+        }
+
+        .nav-links a:hover {
+            background-color: #f5f4ff;
+        }
+
+        .logout-button {
+            font-size: 0.875rem;
+            min-height: 2.25rem;
+            padding: 0.5rem 1rem;
+            color: var(--brand-purple);
+            background-color: white;
+            border: 0.0625rem solid var(--brand-purple);
+            border-radius: 0.3125rem;
+            cursor: pointer;
+        }
+
+        .logout-button:hover {
+            background-color: #f5f4ff;
+        }
+
+        main {
+            width: 90%;
+            max-width: 75rem;
+            margin: 2.5rem auto;
+        }
+
+        .page-header {
+            margin-bottom: 1.875rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.625rem;
+            color: var(--brand-purple);
+        }
+
+        .card {
+            background: white;
+            border: 0.0625rem solid var(--card-border);
+            border-top: 0.25rem solid var(--brand-purple);
+            padding: 1.5rem;
+        }
+
+        .state-card {
+            padding: 1.875rem;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.375rem;
+            margin-bottom: 0.75rem;
+            color: var(--brand-purple);
+        }
+
+        .section {
+            margin-bottom: 1.125rem;
+            padding-bottom: 1rem;
+            border-bottom: 0.0625rem solid var(--line-gray);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .section h3 {
+            font-size: 1rem;
+            margin-bottom: 0.625rem;
+            color: var(--brand-purple);
+        }
+
+        .section p {
+            margin-bottom: 0.5625rem;
+            color: #444;
+            line-height: 1.4;
+        }
+
+        .section strong {
+            display: inline-block;
+            min-width: 9.0625rem;
+        }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.3125rem 0.625rem;
+            border-radius: 999px;
+            font-size: 0.8125rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            border: 0.0625rem solid transparent;
+        }
+
+        .status-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+
+        .status-available {
+            background: #f5f4ff;
+            border-color: #cfcdf8;
+            color: #4a4ac4;
+        }
+
+        .status-unavailable {
+            background: #f5f6f8;
+            border-color: #d8dde3;
+            color: #5a626d;
+        }
+
+        #message {
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            min-height: 1.25rem;
+        }
+
+        .error {
+            color: #b00020;
+        }
+
+        .error-message {
+            color: #b00020;
+        }
+
+        .details-actions {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .details-actions button {
+            padding: 0.5rem 0.875rem;
+            border: 0.0625rem solid var(--brand-purple);
+            border-radius: 0.3125rem;
+            background: white;
+            color: var(--brand-purple);
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .details-actions button:hover {
+            background-color: #f5f4ff;
+        }
+
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-backdrop.visible {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border: 0.0625rem solid var(--card-border);
+            border-top: 0.25rem solid var(--brand-purple);
+            width: 100%;
+            max-width: 30rem;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+
+        .modal h3 {
+            color: var(--brand-purple);
+            margin-bottom: 0.75rem;
+        }
+
+        .modal label {
+            display: block;
+            margin-top: 0.625rem;
+            margin-bottom: 0.25rem;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+
+        .modal input,
+        .modal textarea {
+            width: 100%;
+            padding: 0.625rem;
+            border: 0.0625rem solid #ccc;
+            border-radius: 0.3125rem;
+            font-size: 0.875rem;
+        }
+
+        .modal textarea {
+            min-height: 6rem;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.625rem;
+            justify-content: flex-end;
+            margin-top: 0.875rem;
+        }
+
+        .modal-actions button {
+            padding: 0.5rem 0.875rem;
+            border: 0.0625rem solid var(--brand-purple);
+            border-radius: 0.3125rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .modal-cancel {
+            color: var(--brand-purple);
+            background: white;
+        }
+
+        .modal-send {
+            color: white;
+            background: var(--brand-purple);
+        }
+
+        .modal-message {
+            margin-top: 0.5rem;
+            min-height: 1.25rem;
+            color: #b00020;
+            font-size: 0.875rem;
+        }
+
+        .modal-message.success {
+            color: #2d5a27;
+        }
+
+        footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 1.125rem 1.875rem;
+            margin-top: 3.75rem;
+            background-color: white;
+            border-top: 0.0625rem solid var(--line-gray);
+            color: var(--text-muted);
+            font-size: 0.8125rem;
+        }
+
+        @media (max-width: 50rem) {
+            nav {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.625rem;
+            }
+
+            main {
+                width: 94%;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+            }
+
+            .section strong {
+                min-width: auto;
+                display: block;
+                margin-bottom: 0.125rem;
+            }
+
+            footer {
+                flex-direction: column;
+                gap: 0.625rem;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 35rem) {
+            nav,
+            footer {
+                padding: 0.75rem 1rem;
+            }
+
+            .nav-links {
+                width: 100%;
+            }
+
+            .nav-links a,
+            .logout-button {
+                width: 100%;
+                text-align: center;
+            }
+
+            .card {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h1>Shared Workspace App</h1>
+        <div class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a id="backLink" href="workspaces.html">Back to Workspaces</a>
+            <button id="logoutBtn" class="logout-button" type="button">Logout</button>
+        </div>
+    </nav>
+
+    <main>
+        <section class="page-header">
+            <h2>Workspace Details</h2>
+        </section>
+
+        <p id="message"></p>
+        <section id="stateCard" class="card state-card" hidden>
+            <p id="stateText" class="error-message"></p>
+        </section>
+
+        <section id="detailsCard" class="card" hidden>
+            <h2 id="workspaceTitle"></h2>
+
+            <div class="section">
+                <h3>Workspace Information</h3>
+                <p><strong>Type:</strong> <span id="workspaceType"></span></p>
+                <p><strong>Capacity:</strong> <span id="workspaceCapacity"></span></p>
+                <p><strong>Smoking:</strong> <span id="workspaceSmoking"></span></p>
+                <p><strong>Rental Term:</strong> <span id="workspaceLeaseTerm"></span></p>
+            </div>
+
+            <div class="section">
+                <h3>Related Property Information</h3>
+                <p><strong>Address:</strong> <span id="propertyAddress"></span></p>
+                <p><strong>Neighborhood:</strong> <span id="propertyNeighborhood"></span></p>
+                <p><strong>Owner Contact:</strong> <span id="propertyOwner"></span></p>
+            </div>
+
+            <div class="section">
+                <h3>Availability</h3>
+                <span id="workspaceAvailability" class="status">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span id="workspaceAvailabilityText"></span>
+                </span>
+            </div>
+
+            <div class="section">
+                <h3>Price</h3>
+                <p><strong>Listed Price:</strong> $<span id="workspacePrice"></span></p>
+            </div>
+
+            <div id="detailsActions" class="details-actions" hidden>
+                <button id="contactOwnerBtn" type="button">Contact Owner</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <span>SODV1201 Group 1 — Shared Workspace App</span>
+        <span>GitHub Repository | Contact Information</span>
+    </footer>
+
+    <div class="modal-backdrop" id="contactModal" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="contactModalTitle">
+            <h3 id="contactModalTitle">Contact Owner</h3>
+            <p id="contactModalContext"></p>
+
+            <label for="contactName">Your Name</label>
+            <input id="contactName" type="text" placeholder="Enter your name">
+
+            <label for="contactEmail">Your Email</label>
+            <input id="contactEmail" type="email" placeholder="Enter your email">
+
+            <label for="contactMessage">Message</label>
+            <textarea id="contactMessage" placeholder="Write your message to the owner"></textarea>
+
+            <div class="modal-actions">
+                <button id="contactCancelBtn" type="button" class="modal-cancel">Cancel</button>
+                <button id="contactSendBtn" type="button" class="modal-send">Send Message</button>
+            </div>
+            <p id="contactModalMessage" class="modal-message"></p>
+        </div>
+    </div>
+
+    <script>
+        const email = localStorage.getItem('email');
+        if (!email) {
+            window.location.href = 'login.html';
+        }
+
+        const role = localStorage.getItem('role');
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const params = new URLSearchParams(window.location.search);
+        const propertyIndex = params.get('propertyIndex');
+        const workspaceIndex = params.get('workspaceIndex');
+        const detailsActions = document.getElementById('detailsActions');
+        const contactOwnerBtn = document.getElementById('contactOwnerBtn');
+        const contactModal = document.getElementById('contactModal');
+        const contactModalContext = document.getElementById('contactModalContext');
+        const contactModalMessage = document.getElementById('contactModalMessage');
+        const contactNameInput = document.getElementById('contactName');
+        const contactEmailInput = document.getElementById('contactEmail');
+        const contactMessageInput = document.getElementById('contactMessage');
+        const contactSendBtn = document.getElementById('contactSendBtn');
+        const contactCancelBtn = document.getElementById('contactCancelBtn');
+
+        let currentWorkspace = null;
+
+        contactEmailInput.value = email || '';
+
+        if (propertyIndex !== null) {
+            document.getElementById('backLink').href = role === 'owner'
+                ? `workspaces.html?propertyIndex=${propertyIndex}`
+                : 'workspaces.html';
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
+
+        contactOwnerBtn.addEventListener('click', openContactModal);
+        contactCancelBtn.addEventListener('click', closeContactModal);
+        contactSendBtn.addEventListener('click', sendContactMessage);
+        contactModal.addEventListener('click', (event) => {
+            if (event.target === contactModal) {
+                closeContactModal();
+            }
+        });
+
+        function openContactModal() {
+            if (!currentWorkspace) {
+                return;
+            }
+
+            contactModalContext.textContent = `Message owner for ${currentWorkspace.type} at ${currentWorkspace.address}`;
+            contactNameInput.value = '';
+            contactMessageInput.value = '';
+            contactModalMessage.textContent = '';
+            contactModalMessage.classList.remove('success');
+            contactModal.classList.add('visible');
+            contactModal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeContactModal() {
+            contactModal.classList.remove('visible');
+            contactModal.setAttribute('aria-hidden', 'true');
+        }
+
+        async function sendContactMessage() {
+            if (!currentWorkspace) {
+                return;
+            }
+
+            const senderName = contactNameInput.value.trim();
+            const senderEmail = contactEmailInput.value.trim();
+            const messageText = contactMessageInput.value.trim();
+
+            if (!senderName || !senderEmail || !messageText) {
+                contactModalMessage.textContent = 'Please complete all contact fields.';
+                contactModalMessage.classList.remove('success');
+                return;
+            }
+
+            contactSendBtn.disabled = true;
+            const originalBtnText = contactSendBtn.textContent;
+            contactSendBtn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch('/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fromEmail: email,
+                        toEmail: currentWorkspace.ownerEmail,
+                        senderName,
+                        senderEmail,
+                        message: messageText,
+                        propertyIndex: currentWorkspace.propertyIndex,
+                        workspaceIndex: currentWorkspace.workspaceIndex,
+                        workspaceType: currentWorkspace.type
+                    })
+                });
+
+                const data = await response.json();
+                contactModalMessage.textContent = data.message || 'Request completed.';
+                contactModalMessage.classList.toggle('success', Boolean(data.success));
+
+                if (data.success) {
+                    setTimeout(() => {
+                        closeContactModal();
+                    }, 700);
+                }
+            } catch (error) {
+                contactModalMessage.textContent = 'Message could not be sent. Please try again.';
+                contactModalMessage.classList.remove('success');
+                console.error('Error sending contact message:', error);
+            } finally {
+                contactSendBtn.disabled = false;
+                contactSendBtn.textContent = originalBtnText;
+            }
+        }
+
+        async function loadWorkspaceDetails() {
+            const message = document.getElementById('message');
+            const stateCard = document.getElementById('stateCard');
+            const stateText = document.getElementById('stateText');
+            const detailsCard = document.getElementById('detailsCard');
+
+            function showState(text) {
+                message.textContent = '';
+                stateText.textContent = text;
+                stateCard.hidden = false;
+                detailsCard.hidden = true;
+            }
+
+            if (propertyIndex === null || workspaceIndex === null) {
+                showState('Workspace details cannot be loaded: missing workspace selection.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/workspaces');
+                const data = await response.json();
+                const workspaces = data.success ? data.workspaces : [];
+
+                const workspace = workspaces.find((item) => {
+                    return String(item.propertyIndex) === String(propertyIndex)
+                        && String(item.workspaceIndex) === String(workspaceIndex);
+                });
+
+                if (!workspace) {
+                    showState('The selected workspace was not found.');
+                    return;
+                }
+
+                currentWorkspace = workspace;
+
+                document.getElementById('workspaceTitle').textContent = `${workspace.type} - ${workspace.address}`;
+                document.getElementById('workspaceType').textContent = workspace.type;
+                document.getElementById('workspaceCapacity').textContent = workspace.capacity;
+                document.getElementById('workspaceSmoking').textContent = workspace.smoking;
+                document.getElementById('workspaceLeaseTerm').textContent = workspace.leaseTerm;
+                document.getElementById('propertyAddress').textContent = workspace.address;
+                document.getElementById('propertyNeighborhood').textContent = workspace.neighborhood;
+                document.getElementById('propertyOwner').textContent = workspace.ownerEmail;
+                const availabilityBadge = document.getElementById('workspaceAvailability');
+                const availabilityText = document.getElementById('workspaceAvailabilityText');
+                const availabilityValue = String(workspace.availability || '').trim();
+                const isAvailable = availabilityValue.toLowerCase() === 'available';
+
+                availabilityBadge.classList.remove('status-available', 'status-unavailable');
+                availabilityBadge.classList.add(isAvailable ? 'status-available' : 'status-unavailable');
+                availabilityText.textContent = isAvailable ? 'Available' : 'Unavailable';
+                document.getElementById('workspacePrice').textContent = workspace.price;
+
+                const workspaceOwner = String(workspace.ownerEmail || '').trim().toLowerCase();
+                if (workspaceOwner !== normalizedEmail) {
+                    detailsActions.hidden = false;
+                } else {
+                    detailsActions.hidden = true;
+                }
+
+                message.textContent = '';
+                stateCard.hidden = true;
+                detailsCard.hidden = false;
+            } catch (error) {
+                showState('Workspace details could not be loaded.');
+                console.error('Error loading workspace details:', error);
+            }
+        }
+
+        loadWorkspaceDetails();
+    </script>
+</body>
+</html>

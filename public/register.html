@@ -4,106 +4,147 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
-    <link rel="stylesheet" href="styles.css">
     <style>
+        html {
+            font-size: 100%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
         body {
             background-color: #f0f0f0;
         }
 
         nav {
-            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9375rem 1.875rem;
+            background-color: white;
+            border-bottom: 0.0625rem solid #ddd;
+        }
+
+        nav h1 {
+            font-size: 1.125rem;
+            font-weight: bold;
+            color: #5b5bd6;
         }
 
         nav a {
+            text-decoration: none;
             color: #5b5bd6;
-            background-color: #fff;
-            border: 1px solid #5b5bd6;
-            border-radius: 5px;
-            padding: 8px 16px;
+            border: 0.0625rem solid #5b5bd6;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3125rem;
         }
 
-        nav a:hover {
-            background: #f5f5ff;
+        .nav-links {
+            display: flex;
+            gap: 0.625rem;
         }
 
         .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             min-height: 90vh;
         }
 
         .card {
-            padding: 40px;
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 0.5rem;
+            border: 0.0625rem solid #ddd;
             width: 100%;
-            max-width: 450px;
+            max-width: 28.125rem;
         }
 
         .card h2 {
             text-align: center;
-            margin-bottom: 25px;
-            font-size: 24px;
+            margin-bottom: 1.5625rem;
+            font-size: 1.5rem;
+            color: #5b5bd6;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 0.3125rem;
+            font-size: 0.875rem;
+            color: #5b5bd6;
         }
 
         input, select {
-            padding: 12px;
-            margin-bottom: 15px;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.9375rem;
+            border: 0.0625rem solid #ccc;
+            border-radius: 0.3125rem;
+            font-size: 0.875rem;
+            color: #333;
+        }
+
+        input::placeholder {
+            color: #aaa;
         }
 
         .password-field {
-            position: relative;
-            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.9375rem;
         }
 
         .password-field input {
             margin-bottom: 0;
-            padding-right: 72px;
         }
 
-        .toggle-password {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
+        .password-toggle {
+            flex: 0 0 auto;
             width: auto;
-            padding: 6px 10px;
-            margin: 0;
-            font-size: 12px;
+            padding: 0.5rem 0.75rem;
+            border: 0.0625rem solid #5b5bd6;
+            border-radius: 0.3125rem;
+            background: white;
             color: #5b5bd6;
-            background: #fff;
-            border: 1px solid #5b5bd6;
-            border-radius: 5px;
+            font-size: 0.8125rem;
+            cursor: pointer;
         }
 
-        .toggle-password:hover {
-            background: #f5f5ff;
+        .password-toggle:hover {
+            background: #f5f4ff;
         }
 
-        .password-note {
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 12px;
-            color: #666;
-            line-height: 1.4;
+        .password-toggle:focus-visible {
+            outline: 0.125rem solid #cfcdf8;
+            outline-offset: 0.0625rem;
         }
 
         button {
             width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            margin-top: 5px;
-        }
-
-        .primary-action {
-            color: #fff;
+            padding: 0.875rem;
             background-color: #5b5bd6;
-            border: 1px solid #5b5bd6;
+            color: white;
+            border: none;
+            border-radius: 0.3125rem;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 0.3125rem;
         }
 
-        .primary-action:hover {
+        button:hover {
             background-color: #4a4ac4;
         }
 
         .login-link {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 0.9375rem;
+            font-size: 0.875rem;
         }
 
         .login-link a {
@@ -114,14 +155,34 @@
         #message {
             text-align: center;
             color: red;
-            margin-top: 10px;
+            margin-top: 0.625rem;
+        }
+
+        @media (max-width: 35rem) {
+            nav {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.625rem;
+                padding: 0.75rem 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+                min-height: calc(100vh - 4rem);
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <nav>
         <h1>Shared Workspace App</h1>
-        <a href="login.html">Login</a>
+        <div class="nav-links">
+            <a href="login.html">Login</a>
+        </div>
     </nav>
 
     <div class="container">
@@ -140,31 +201,13 @@
             <label>Password</label>
             <div class="password-field">
                 <input type="password" id="password" placeholder="Enter your password"/>
-                <button
-                    type="button"
-                    class="toggle-password"
-                    id="toggleRegisterPassword"
-                    aria-label="Show password"
-                >
-                    Show
-                </button>
+                <button type="button" class="password-toggle" id="togglePasswordBtn" onclick="togglePasswordVisibility('password', 'togglePasswordBtn')">Show</button>
             </div>
-            <p class="password-note">
-                Password must be at least 8 characters and include 1 uppercase letter,
-                1 lowercase letter, 1 number, and 1 special character.
-            </p>
 
             <label>Confirm Password</label>
             <div class="password-field">
                 <input type="password" id="confirmPassword" placeholder="Re-enter your password"/>
-                <button
-                    type="button"
-                    class="toggle-password"
-                    id="toggleConfirmPassword"
-                    aria-label="Show confirm password"
-                >
-                    Show
-                </button>
+                <button type="button" class="password-toggle" id="toggleConfirmPasswordBtn" onclick="togglePasswordVisibility('confirmPassword', 'toggleConfirmPasswordBtn')">Show</button>
             </div>
 
             <label>Role</label>
@@ -174,7 +217,7 @@
                 <option value="coworker">Coworker</option>
             </select>
 
-            <button class="primary-action" onclick="register()">Register</button>
+            <button onclick="register()">Register</button>
             <p id="message"></p>
 
             <div class="login-link">
@@ -184,27 +227,13 @@
     </div>
 
     <script>
-        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}$/;
-
-        function setupPasswordToggle(toggleId, inputId) {
-            const toggleButton = document.getElementById(toggleId);
+        function togglePasswordVisibility(inputId, buttonId) {
             const input = document.getElementById(inputId);
-
-            // Always start hidden with a Show control.
-            input.type = 'password';
-            toggleButton.textContent = 'Show';
-            toggleButton.setAttribute('aria-label', 'Show password');
-
-            toggleButton.addEventListener('click', () => {
-                const isHidden = input.type === 'password';
-                input.type = isHidden ? 'text' : 'password';
-                toggleButton.textContent = isHidden ? 'Hide' : 'Show';
-                toggleButton.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
-            });
+            const button = document.getElementById(buttonId);
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.textContent = show ? 'Hide' : 'Show';
         }
-
-        setupPasswordToggle('toggleRegisterPassword', 'password');
-        setupPasswordToggle('toggleConfirmPassword', 'confirmPassword');
 
         async function register() {
             const name = document.getElementById('name').value;
@@ -216,11 +245,6 @@
 
             if (password !== confirmPassword) {
                 document.getElementById('message').textContent = 'Passwords do not match!';
-                return;
-            }
-
-            if (!passwordPattern.test(password)) {
-                document.getElementById('message').textContent = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
                 return;
             }
 

@@ -4,90 +4,224 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Workspace</title>
-    <link rel="stylesheet" href="styles.css">
     <style>
+        html {
+            font-size: 100%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
         body {
             background-color: #f0f0f0;
+            color: #222;
         }
 
         nav {
-            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9375rem 1.875rem;
+            background-color: white;
+            border-bottom: 0.0625rem solid #ddd;
         }
 
-        nav a {
-            padding: 8px 16px;
+        nav h1 {
+            font-size: 1.125rem;
+            font-weight: bold;
+            color: #5b5bd6;
+        }
+
+        nav a,
+        nav button {
+            text-decoration: none;
+            color: #5b5bd6;
+            border: 0.0625rem solid #5b5bd6;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3125rem;
+            background-color: white;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        nav a:hover,
+        nav button:hover {
+            background-color: #f5f4ff;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.625rem;
         }
 
         .container {
-            min-height: 90vh;
-            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: calc(100vh - 4.5rem);
+            padding: 2rem 1.875rem;
         }
 
         .card {
-            padding: 40px;
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 0.5rem;
+            border: 0.0625rem solid #ddd;
+            border-top: 0.25rem solid #5b5bd6;
             width: 100%;
-            max-width: 500px;
+            max-width: 31.25rem;
         }
 
         .card h2 {
-            margin-bottom: 5px;
-            font-size: 22px;
+            margin-bottom: 0.3125rem;
+            font-size: 1.375rem;
+            color: #5b5bd6;
         }
 
         .card p.subtitle {
             color: #666;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #ddd;
+            font-size: 0.875rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.9375rem;
+            border-bottom: 0.0625rem solid #ddd;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 0.3125rem;
+            font-size: 0.875rem;
+            color: #5b5bd6;
         }
 
         input, select {
-            padding: 12px;
-            margin-bottom: 15px;
-            color: #333;
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.9375rem;
+            border: 0.0625rem solid #ccc;
+            border-radius: 0.3125rem;
+            font-size: 0.875rem;
+            color: #222;
+        }
+
+        input::placeholder {
+            color: #aaa;
         }
 
         .note {
-            font-size: 12px;
+            font-size: 0.75rem;
             color: #666;
             font-style: italic;
-            margin-bottom: 15px;
+            margin-bottom: 0.9375rem;
         }
 
         .buttons {
             display: flex;
-            gap: 10px;
+            gap: 0.625rem;
         }
 
         .btn-save {
             flex: 1;
-            padding: 14px;
-            font-size: 16px;
+            padding: 0.875rem;
+            background-color: #5b5bd6;
+            color: white;
+            border: none;
+            border-radius: 0.3125rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .btn-save:hover {
+            background-color: #4a4ac4;
         }
 
         .btn-cancel {
             flex: 1;
-            padding: 14px;
-            color: #5b5bd6;
-            font-size: 16px;
+            padding: 0.875rem;
+            background-color: #5b5bd6;
+            color: white;
+            border: 0.0625rem solid #5b5bd6;
+            border-radius: 0.3125rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .btn-cancel:hover {
+            background-color: #4a4ac4;
         }
 
         #message {
             text-align: center;
-            color: red;
+            margin-top: 0.625rem;
+            min-height: 1.25rem;
+            font-size: 0.875rem;
+            color: #b00020;
+        }
+
+        #message.success {
+            color: #2d5a27;
+        }
+
+        @media (max-width: 50rem) {
+            nav {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.625rem;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+            }
+
+            .container {
+                min-height: auto;
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 35rem) {
+            nav {
+                padding: 0.75rem 1rem;
+            }
+
+            .nav-links {
+                width: 100%;
+            }
+
+            .nav-links a,
+            .nav-links button {
+                width: 100%;
+                text-align: center;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <nav>
         <h1>Shared Workspace App</h1>
-        <a href="my-properties.html">My Properties</a>
+        <div class="nav-links">
+            <a href="index.html">Dashboard</a>
+            <a href="my-properties.html">My Properties</a>
+            <button type="button" onclick="logout()">Logout</button>
+        </div>
     </nav>
 
     <div class="container">
         <div class="card">
-            <h2>Add New Workspace</h2>
-            <p class="subtitle">Owners connect each workspace to one selected property.</p>
+            <h2 id="formTitle">Add New Workspace</h2>
+            <p id="formSubtitle" class="subtitle">Owners connect each workspace to one selected property.</p>
 
             <label>Select Property</label>
             <select id="propertyIndex">
@@ -103,7 +237,7 @@
             </select>
 
             <label>Capacity</label>
-            <input type="number" id="capacity" placeholder="Enter number of people"/>
+            <input type="number" id="capacity" placeholder="Enter number of people" min="1"/>
 
             <label>Smoking Allowed</label>
             <select id="smoking">
@@ -127,14 +261,14 @@
                 <option value="Month">Monthly</option>
             </select>
 
-            <label>Price</label>
-            <input type="number" id="price" placeholder="Enter price amount"/>
+            <label>Price (Whole Dollars)</label>
+            <input type="number" id="price" placeholder="Enter price amount" min="1" step="1"/>
 
-            <p class="note">A workspace must be connected to one property.</p>
+            <p class="note">Whole dollars only (positive integers).</p>
 
             <div class="buttons">
-                <button class="btn-save" onclick="addWorkspace()">Save Workspace</button>
-                <button class="btn-cancel" onclick="window.location.href='my-properties.html'">Cancel</button>
+                <button id="saveBtn" type="button" class="btn-save" onclick="saveWorkspace()">Save Workspace</button>
+                <button type="button" class="btn-cancel" onclick="cancelWorkspaceForm()">Cancel</button>
             </div>
             <p id="message"></p>
         </div>
@@ -142,9 +276,27 @@
 
     <script>
         const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+        const params = new URLSearchParams(window.location.search);
+        const selectedPropertyIndex = params.get('propertyIndex');
+        const selectedWorkspaceIndex = params.get('workspaceIndex');
+        const isEditMode = selectedPropertyIndex !== null && selectedWorkspaceIndex !== null;
+        const editPropertyIndex = Number.parseInt(selectedPropertyIndex, 10);
+        const editWorkspaceIndex = Number.parseInt(selectedWorkspaceIndex, 10);
 
-        if (!email) {
+        if (!email || role !== 'owner') {
             window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        function setMessage(text, isSuccess = false) {
+            const message = document.getElementById('message');
+            message.textContent = text;
+            message.classList.toggle('success', isSuccess);
         }
 
         // Load owner properties into dropdown
@@ -152,19 +304,72 @@
             const res = await fetch('/properties?email=' + email);
             const data = await res.json();
             const select = document.getElementById('propertyIndex');
-            data.properties.forEach((p) => {
-                if (p.propertyIndex === undefined || p.propertyIndex === null) {
-                    return;
-                }
-
+            data.properties.forEach((p, index) => {
                 const option = document.createElement('option');
-                option.value = p.propertyIndex;
+                option.value = index;
                 option.textContent = p.address;
                 select.appendChild(option);
             });
+
+            if (selectedPropertyIndex !== null) {
+                select.value = selectedPropertyIndex;
+            }
         }
 
-        async function addWorkspace() {
+        async function loadWorkspaceForEdit() {
+            const message = document.getElementById('message');
+            const title = document.getElementById('formTitle');
+            const subtitle = document.getElementById('formSubtitle');
+            const saveBtn = document.getElementById('saveBtn');
+
+            if (Number.isNaN(editPropertyIndex) || Number.isNaN(editWorkspaceIndex)) {
+                setMessage('Invalid workspace selected for editing.');
+                saveBtn.disabled = true;
+                return;
+            }
+
+            try {
+                const res = await fetch('/workspaces');
+                const data = await res.json();
+                const normalizedEmail = String(email || '').trim().toLowerCase();
+                const workspace = (data.workspaces || []).find((w) => {
+                    const ownerEmail = String(w.ownerEmail || '').trim().toLowerCase();
+                    return Number(w.propertyIndex) === editPropertyIndex && Number(w.workspaceIndex) === editWorkspaceIndex && ownerEmail === normalizedEmail;
+                });
+
+                if (!workspace) {
+                    setMessage('Workspace not found or access denied.');
+                    saveBtn.disabled = true;
+                    return;
+                }
+
+                title.textContent = 'Edit Workspace';
+                subtitle.textContent = 'Update the selected workspace details.';
+                saveBtn.textContent = 'Update Workspace';
+
+                const propertySelect = document.getElementById('propertyIndex');
+                propertySelect.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = String(workspace.propertyIndex);
+                option.textContent = workspace.address;
+                propertySelect.appendChild(option);
+                propertySelect.value = String(workspace.propertyIndex);
+                propertySelect.disabled = true;
+
+                document.getElementById('type').value = workspace.type;
+                document.getElementById('capacity').value = workspace.capacity;
+                document.getElementById('smoking').value = workspace.smoking;
+                document.getElementById('availability').value = workspace.availability;
+                document.getElementById('leaseTerm').value = workspace.leaseTerm;
+                document.getElementById('price').value = workspace.price;
+            } catch (error) {
+                setMessage('Could not load workspace details for editing.');
+                saveBtn.disabled = true;
+                console.error('Error loading workspace for edit:', error);
+            }
+        }
+
+        async function saveWorkspace() {
             const propertyIndex = document.getElementById('propertyIndex').value;
             const type = document.getElementById('type').value;
             const capacity = document.getElementById('capacity').value;
@@ -172,26 +377,97 @@
             const availability = document.getElementById('availability').value;
             const leaseTerm = document.getElementById('leaseTerm').value;
             const price = document.getElementById('price').value;
+            const parsedCapacity = Number(capacity);
+            const parsedPrice = Number(price);
 
-            if (!propertyIndex || !type || !capacity || !smoking || !availability || !leaseTerm || !price) {
-                document.getElementById('message').textContent = 'Please fill in all fields!';
+            // propertyIndex can be "0" for the first property, so only empty string is invalid.
+            if (propertyIndex === '' || !type || !capacity || !smoking || !availability || !leaseTerm || !price) {
+                setMessage('Please fill in all fields!');
                 return;
             }
 
-            const res = await fetch('/workspaces', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price })
-            });
-            const data = await res.json();
-            document.getElementById('message').textContent = data.message;
+            if (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0) {
+                setMessage('Capacity must be greater than 0.');
+                return;
+            }
 
-            if (data.success) {
-                window.location.href = 'my-properties.html';
+            if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+                setMessage('Price must be greater than 0.');
+                return;
+            }
+
+            if (!Number.isInteger(parsedPrice)) {
+                setMessage('Price must be a whole dollar amount.');
+                return;
+            }
+
+            const endpoint = isEditMode
+                ? `/workspaces/${editPropertyIndex}/${editWorkspaceIndex}`
+                : '/workspaces';
+            const method = isEditMode ? 'PUT' : 'POST';
+
+            const saveBtn = document.getElementById('saveBtn');
+            const originalBtnText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = isEditMode ? 'Updating...' : 'Saving...';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price: parsedPrice })
+                });
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (parseError) {
+                    data = {
+                        success: false,
+                        message: 'Server returned an unexpected response. Please try again.'
+                    };
+                }
+
+                if (!res.ok && !data.message) {
+                    data.message = 'Workspace update failed. Please try again.';
+                }
+
+                setMessage(data.message || 'Request completed.', Boolean(data.success));
+
+                if (data.success) {
+                    if (isEditMode) {
+                        window.location.href = `workspaces.html?propertyIndex=${editPropertyIndex}`;
+                        return;
+                    }
+                    window.location.href = 'my-properties.html';
+                }
+            } catch (error) {
+                setMessage('Could not save workspace. Check server status and try again.');
+                console.error('Error saving workspace:', error);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalBtnText;
             }
         }
 
-        loadProperties();
+        async function initWorkspaceForm() {
+            if (isEditMode) {
+                await loadWorkspaceForEdit();
+                return;
+            }
+
+            await loadProperties();
+        }
+
+        function cancelWorkspaceForm() {
+            if (isEditMode) {
+                window.location.href = `workspaces.html?propertyIndex=${editPropertyIndex}`;
+                return;
+            }
+            window.location.href = 'my-properties.html';
+        }
+
+        initWorkspaceForm();
     </script>
 </body>
 </html>
