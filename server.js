@@ -10,6 +10,7 @@ const app = express();
 
 const users = [];
 const properties = [];
+const contactMessages = [];
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 const allowedRoles = new Set(['owner', 'coworker']);
 const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}$/;
@@ -251,6 +252,42 @@ app.get('/workspaces', (req, res) => {
         });
     });
     res.json({ success: true, workspaces: allWorkspaces });
+});
+
+app.post('/messages', (req, res) => {
+    const {
+        fromEmail,
+        toEmail,
+        senderName,
+        senderEmail,
+        message,
+        propertyIndex,
+        workspaceIndex,
+        workspaceType
+    } = req.body;
+
+    const normalizedToEmail = String(toEmail || '').trim();
+    const normalizedSenderName = String(senderName || '').trim();
+    const normalizedSenderEmail = String(senderEmail || '').trim();
+    const normalizedMessage = String(message || '').trim();
+
+    if (!normalizedToEmail || !normalizedSenderName || !normalizedSenderEmail || !normalizedMessage) {
+        return res.json({ success: false, message: 'All contact fields are required.' });
+    }
+
+    contactMessages.push({
+        fromEmail: String(fromEmail || '').trim(),
+        toEmail: normalizedToEmail,
+        senderName: normalizedSenderName,
+        senderEmail: normalizedSenderEmail,
+        message: normalizedMessage,
+        propertyIndex,
+        workspaceIndex,
+        workspaceType: String(workspaceType || '').trim(),
+        createdAt: new Date().toISOString()
+    });
+
+    return res.json({ success: true, message: 'Message sent to owner.' });
 });
 
 if (require.main === module) {
