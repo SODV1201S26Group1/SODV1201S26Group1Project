@@ -4,45 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shared Workspace App</title>
-    <link rel="stylesheet" href="styles.css">
 
     <style>
+        html {
+            font-size: 100%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
         body {
             background-color: white;
+            color: #222;
         }
 
         nav {
-            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9375rem 1.875rem;
+            background-color: white;
+            border-bottom: 0.0625rem solid #ddd;
+        }
+
+        nav h1 {
+            font-size: 1.125rem;
+            font-weight: bold;
+            color: #5b5bd6;
         }
 
         .nav-links {
-            gap: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
         }
 
-        .nav-links a {
-            color: #222;
-            font-size: 14px;
+        .auth-status {
+            font-size: 0.75rem;
+            color: #444;
+            font-weight: 600;
+            max-width: 24rem;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            line-height: 1.3;
+            display: none;
         }
 
-        .nav-links .btn-outline,
+        .nav-links .nav-btn {
+            display: inline-block;
+            text-decoration: none;
+            color: #5b5bd6;
+            border: 0.0625rem solid #5b5bd6;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3125rem;
+            font-size: 0.875rem;
+            background-color: white;
+        }
+
+        .nav-links .nav-btn:hover {
+            background-color: #f5f4ff;
+        }
+
         .nav-links .btn-primary {
-            padding: 8px 16px;
+            color: white;
+            background-color: #5b5bd6;
+            border: 0.0625rem solid #5b5bd6;
+            padding: 0.5rem 1rem;
+            border-radius: 0.3125rem;
+            font-size: 0.875rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .nav-links button.nav-btn {
+            background-color: white;
+            cursor: pointer;
+            font-size: 0.875rem;
         }
 
         .hero {
             background-color: #f0f0f0;
             text-align: center;
-            padding: 55px 20px;
+            padding: 3.4375rem 1.25rem;
         }
 
         .hero h2 {
-            font-size: 30px;
-            margin-bottom: 20px;
+            font-size: 1.875rem;
+            margin-bottom: 1.25rem;
+            color: #5b5bd6;
         }
 
         .hero-description {
-            max-width: 760px;
-            margin: 0 auto 25px;
+            max-width: 47.5rem;
+            margin: 0 auto 1.5625rem;
             line-height: 1.5;
             color: #444;
         }
@@ -50,24 +108,24 @@
         .search-area {
             display: flex;
             justify-content: center;
-            max-width: 650px;
-            margin: 0 auto 20px;
+            max-width: 40.625rem;
+            margin: 0 auto 1.25rem;
         }
 
         .search-area input {
             flex: 1;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 5px 0 0 5px;
-            font-size: 14px;
+            padding: 0.75rem;
+            border: 0.0625rem solid #ccc;
+            border-radius: 0.3125rem 0 0 0.3125rem;
+            font-size: 0.875rem;
         }
 
         .search-area button {
-            padding: 12px 22px;
+            padding: 0.75rem 1.375rem;
             border: none;
             background-color: #5b5bd6;
             color: white;
-            border-radius: 0 5px 5px 0;
+            border-radius: 0 0.3125rem 0.3125rem 0;
             cursor: pointer;
         }
 
@@ -75,94 +133,102 @@
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 0.625rem;
         }
 
         .hero-buttons a {
-            padding: 11px 20px;
-            border-radius: 5px;
+            padding: 0.6875rem 1.25rem;
+            border-radius: 0.3125rem;
             text-decoration: none;
-            font-size: 14px;
+            font-size: 0.875rem;
         }
 
         .hero-buttons .primary {
             color: white;
             background-color: #5b5bd6;
-            border: 1px solid #5b5bd6;
+            border: 0.0625rem solid #5b5bd6;
         }
 
         .hero-buttons .outline {
             color: #5b5bd6;
             background-color: white;
-            border: 1px solid #5b5bd6;
+            border: 0.0625rem solid #5b5bd6;
+        }
+
+        .hero-buttons .logged-in {
+            color: #5b5bd6;
+            background-color: white;
+            border: 0.0625rem solid #5b5bd6;
         }
 
         main {
-            padding: 40px 5%;
+            padding: 2.5rem 5%;
         }
 
         section {
-            max-width: 1200px;
-            margin: 0 auto 35px;
+            max-width: 75rem;
+            margin: 0 auto 2.1875rem;
         }
 
         section h2 {
-            font-size: 21px;
-            margin-bottom: 20px;
+            font-size: 1.3125rem;
+            margin-bottom: 1.25rem;
+            color: #5b5bd6;
         }
 
         .feature-grid,
         .workspace-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            gap: 1.25rem;
         }
 
         .feature-card,
         .workspace-card {
-            border: 1px solid #ccc;
+            border: 0.0625rem solid #ccc;
             background-color: white;
-            padding: 20px;
+            padding: 1.25rem;
         }
 
         .feature-card h3,
         .workspace-card h3 {
-            font-size: 17px;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #aaa;
+            font-size: 1.0625rem;
+            margin-bottom: 0.625rem;
+            padding-bottom: 0.625rem;
+            border-bottom: 0.0625rem solid #aaa;
+            color: #5b5bd6;
         }
 
         .feature-card p,
         .workspace-card p {
-            font-size: 14px;
+            font-size: 0.875rem;
             line-height: 1.5;
             color: #444;
         }
 
         .workspace-card p {
-            margin-bottom: 5px;
+            margin-bottom: 0.3125rem;
         }
 
         .workspace-card a {
             display: block;
             width: 100%;
-            margin-top: 14px;
-            padding: 9px;
+            margin-top: 0.875rem;
+            padding: 0.5625rem;
             text-align: center;
             text-decoration: none;
             color: #5b5bd6;
-            border: 1px solid #5b5bd6;
-            border-radius: 5px;
+            border: 0.0625rem solid #5b5bd6;
+            border-radius: 0.3125rem;
         }
 
         footer {
             display: flex;
             justify-content: space-between;
-            padding: 18px 30px;
+            padding: 1.125rem 1.875rem;
             background-color: #f0f0f0;
-            border-top: 1px solid #ddd;
-            font-size: 13px;
+            border-top: 0.0625rem solid #ddd;
+            font-size: 0.8125rem;
             color: #555;
         }
 
@@ -171,15 +237,21 @@
             text-decoration: none;
         }
 
-        @media (max-width: 800px) {
+        @media (max-width: 50rem) {
             nav {
                 flex-direction: column;
-                gap: 15px;
+                gap: 0.9375rem;
+                padding: 0.75rem 1rem;
             }
 
             .nav-links {
                 flex-wrap: wrap;
                 justify-content: center;
+                width: 100%;
+            }
+
+            .auth-status {
+                max-width: 100%;
             }
 
             .feature-grid,
@@ -189,19 +261,46 @@
 
             .search-area {
                 flex-direction: column;
-                gap: 10px;
+                gap: 0.625rem;
             }
 
             .search-area input,
             .search-area button {
                 width: 100%;
-                border-radius: 5px;
+                border-radius: 0.3125rem;
             }
 
             footer {
                 flex-direction: column;
-                gap: 10px;
+                gap: 0.625rem;
                 text-align: center;
+            }
+        }
+
+        @media (max-width: 30rem) {
+            .nav-links .nav-btn,
+            .nav-links .btn-primary,
+            .nav-links button.nav-btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .auth-status {
+                width: 100%;
+                text-align: center;
+                max-width: none;
+            }
+
+            .hero {
+                padding: 2.25rem 1rem;
+            }
+
+            .hero h2 {
+                font-size: 1.5rem;
+            }
+
+            main {
+                padding: 1.75rem 5%;
             }
         }
     </style>
@@ -212,11 +311,12 @@
         <h1>Shared Workspace App</h1>
 
         <div class="nav-links">
-            <a href="index.html">Home</a>
-            <a href="workspaces.html">Workspaces</a>
-            <a href="my-properties.html">Properties</a>
-            <a href="login.html" class="btn-outline">Login</a>
-            <a href="register.html" class="btn-primary">Register</a>
+            <a id="propertiesLink" href="my-properties.html" class="nav-btn" style="display: none;">My Properties</a>
+            <a id="workspaceLink" href="workspaces.html" class="nav-btn">Workspaces</a>
+            <span id="authStatus" class="auth-status"></span>
+            <a id="loginLink" href="login.html" class="nav-btn">Login</a>
+            <a id="registerLink" href="register.html" class="btn-primary">Register</a>
+            <button id="logoutBtn" type="button" class="nav-btn" style="display: none;">Logout</button>
         </div>
     </nav>
 
@@ -224,7 +324,8 @@
         <h2>Find or List Shared Workspaces</h2>
 
         <p class="hero-description">
-            Owners can list properties and workspaces. Coworkers can search
+            Owners can list properties and workspaces, and also browse market
+            listings to compare competitor offerings. Coworkers can search
             available workspaces and view owner contact details.
         </p>
 
@@ -237,16 +338,24 @@
         </div>
 
         <div class="hero-buttons">
-            <a href="register.html" class="primary">
+            <a id="heroRegisterOwner" href="register.html" class="primary">
                 Register as Owner
             </a>
 
-            <a href="register.html" class="primary">
+            <a id="heroRegisterCoworker" href="register.html" class="primary">
                 Register as Coworker
             </a>
 
-            <a href="login.html" class="outline">
+            <a id="heroLogin" href="login.html" class="outline">
                 Login
+            </a>
+
+            <a id="heroPrimarySignedIn" href="my-properties.html" class="logged-in" style="display: none;">
+                Open Dashboard
+            </a>
+
+            <a id="heroSecondarySignedIn" href="workspaces.html" class="logged-in" style="display: none;">
+                Browse Workspaces
             </a>
         </div>
     </header>
@@ -321,5 +430,61 @@
             Contact Information
         </span>
     </footer>
+
+    <script>
+        const email = localStorage.getItem('email');
+        const role = localStorage.getItem('role');
+
+        const authStatus = document.getElementById('authStatus');
+        const propertiesLink = document.getElementById('propertiesLink');
+        const workspaceLink = document.getElementById('workspaceLink');
+        const loginLink = document.getElementById('loginLink');
+        const registerLink = document.getElementById('registerLink');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const heroRegisterOwner = document.getElementById('heroRegisterOwner');
+        const heroRegisterCoworker = document.getElementById('heroRegisterCoworker');
+        const heroLogin = document.getElementById('heroLogin');
+        const heroPrimarySignedIn = document.getElementById('heroPrimarySignedIn');
+        const heroSecondarySignedIn = document.getElementById('heroSecondarySignedIn');
+
+        if (email) {
+            const roleLabel = role ? String(role).charAt(0).toUpperCase() + String(role).slice(1) : 'User';
+            authStatus.textContent = `Signed in: ${email} (${roleLabel})`;
+            authStatus.style.display = 'inline-flex';
+            loginLink.style.display = 'none';
+            registerLink.style.display = 'none';
+            logoutBtn.style.display = 'inline-block';
+
+            heroRegisterOwner.style.display = 'none';
+            heroRegisterCoworker.style.display = 'none';
+            heroLogin.style.display = 'none';
+
+            if (String(role || '').toLowerCase() === 'owner') {
+                propertiesLink.style.display = 'inline-block';
+                workspaceLink.href = 'workspaces.html';
+                workspaceLink.textContent = 'My Workspaces';
+
+                heroPrimarySignedIn.href = 'workspaces.html';
+                heroPrimarySignedIn.textContent = 'Browse Market Listings';
+                heroSecondarySignedIn.href = 'add-property.html';
+                heroSecondarySignedIn.textContent = 'Add New Property';
+            } else {
+                workspaceLink.href = 'workspaces.html';
+                workspaceLink.textContent = 'Workspaces';
+                heroPrimarySignedIn.href = 'workspaces.html';
+                heroPrimarySignedIn.textContent = 'Find Workspaces';
+                heroSecondarySignedIn.href = 'workspaces.html';
+                heroSecondarySignedIn.textContent = 'Browse Workspaces';
+            }
+
+            heroPrimarySignedIn.style.display = 'inline-block';
+            heroSecondarySignedIn.style.display = 'inline-block';
+        }
+
+        logoutBtn.addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
+    </script>
 </body>
 </html>
