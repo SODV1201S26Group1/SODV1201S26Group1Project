@@ -144,6 +144,71 @@ app.get('/properties', (req, res) => {
     res.json({ success: true, properties: userProperties });
 });
 
+app.put('/properties/:index', (req, res) => {
+    const {
+        email,
+        address,
+        neighborhood,
+        squareFootage,
+        garage,
+        publicTransport
+    } = req.body;
+
+    const normalizedEmail = normalizeEmail(email);
+    const propertyIndex = Number(req.params.index);
+    const normalizedAddress = String(address || '').trim();
+    const normalizedNeighborhood = String(neighborhood || '').trim();
+    const parsedSquareFootage = Number(squareFootage);
+
+    if (
+        !Number.isInteger(propertyIndex) ||
+        propertyIndex < 0 ||
+        propertyIndex >= properties.length
+    ) {
+        return res.json({
+            success: false,
+            message: 'Invalid property selection.'
+        });
+    }
+
+    const property = properties[propertyIndex];
+
+    if (
+        !property ||
+        normalizeEmail(property.email) !== normalizedEmail
+    ) {
+        return res.json({
+            success: false,
+            message: 'Property not found for this owner.'
+        });
+    }
+
+    if (
+        !normalizedAddress ||
+        !normalizedNeighborhood ||
+        !Number.isInteger(parsedSquareFootage) ||
+        parsedSquareFootage < 1 ||
+        !garage ||
+        !publicTransport
+    ) {
+        return res.json({
+            success: false,
+            message: 'All property fields are required.'
+        });
+    }
+
+    property.address = normalizedAddress;
+    property.neighborhood = normalizedNeighborhood;
+    property.squareFootage = parsedSquareFootage;
+    property.garage = garage;
+    property.publicTransport = publicTransport;
+
+    return res.json({
+        success: true,
+        message: 'Property updated successfully.'
+    });
+});
+
 app.delete('/properties/:index', (req, res) => {
     const email = normalizeEmail(req.body.email);
     const index = parseInt(req.params.index, 10);

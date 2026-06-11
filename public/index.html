@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -278,6 +279,7 @@
         }
 
         @media (max-width: 30rem) {
+
             .nav-links .nav-btn,
             .nav-links .btn-primary,
             .nav-links button.nav-btn {
@@ -330,11 +332,11 @@
         </p>
 
         <div class="search-area">
-            <input
-                type="text"
-                placeholder="Search by workspace type or neighborhood"
-            >
-            <button type="button">Search</button>
+            <input id="heroSearchInput" type="text" placeholder="Search by workspace type or neighborhood">
+
+            <button id="heroSearchButton" type="button">
+                Search
+            </button>
         </div>
 
         <div class="hero-buttons">
@@ -445,7 +447,32 @@
         const heroRegisterCoworker = document.getElementById('heroRegisterCoworker');
         const heroLogin = document.getElementById('heroLogin');
         const heroPrimarySignedIn = document.getElementById('heroPrimarySignedIn');
-        const heroSecondarySignedIn = document.getElementById('heroSecondarySignedIn');
+        const heroSecondarySignedIn = document.getElementById('heroSecondarySignedIn');        
+        const heroSearchInput = document.getElementById('heroSearchInput');
+        const heroSearchButton = document.getElementById('heroSearchButton');
+
+        function runWorkspaceSearch() {
+            const searchTerm = heroSearchInput.value.trim();
+
+            if (searchTerm) {
+                window.location.href =
+                    'workspaces.html?search=' +
+                    encodeURIComponent(searchTerm);
+            } else {
+                window.location.href = 'workspaces.html';
+            }
+        }
+
+        heroSearchButton.addEventListener(
+            'click',
+            runWorkspaceSearch
+        );
+
+        heroSearchInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                runWorkspaceSearch();
+            }
+        });
 
         if (email) {
             const roleLabel = role ? String(role).charAt(0).toUpperCase() + String(role).slice(1) : 'User';
@@ -487,4 +514,5 @@
         });
     </script>
 </body>
+
 </html>

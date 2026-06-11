@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="workspaces.css">
 </head>
+
 <body>
     <nav>
         <div class="nav-title">
@@ -21,6 +23,16 @@
 
     <div class="container">
         <section class="card filters">
+            <div>
+                <label for="searchFilter">Search</label>
+
+                <input id="searchFilter" type="text" placeholder="Type or neighborhood" style="
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        ">
+            </div>
             <div>
                 <label for="typeFilter">Workspace Type</label>
                 <select id="typeFilter">
@@ -106,6 +118,7 @@
         const params = new URLSearchParams(window.location.search);
         const selectedPropertyIndex = params.get('propertyIndex');
         const ownerMode = role === 'owner' && selectedPropertyIndex !== null;
+        const initialSearchTerm = params.get('search') || '';
 
         if (!email) {
             window.location.href = 'login.html';
@@ -150,8 +163,23 @@
             window.location.href = 'login.html';
         });
 
-        document.getElementById('typeFilter').addEventListener('change', renderWorkspaces);
-        document.getElementById('availabilityFilter').addEventListener('change', renderWorkspaces);
+        const searchFilter =
+            document.getElementById('searchFilter');
+
+        searchFilter.value = initialSearchTerm;
+
+        searchFilter.addEventListener(
+            'input',
+            renderWorkspaces
+        );
+
+        document
+            .getElementById('typeFilter')
+            .addEventListener('change', renderWorkspaces);
+
+        document
+            .getElementById('availabilityFilter')
+            .addEventListener('change', renderWorkspaces);
         document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
         document.getElementById('editSaveBtn').addEventListener('click', saveWorkspaceEdit);
         document.getElementById('deleteCancelBtn').addEventListener('click', closeDeleteModal);
@@ -167,15 +195,41 @@
         function renderWorkspaces() {
             const type = document.getElementById('typeFilter').value;
             const availability = document.getElementById('availabilityFilter').value;
+            const searchTerm = document
+                .getElementById('searchFilter')
+                .value
+                .trim()
+                .toLowerCase();
 
             const filtered = workspaces.filter((workspace) => {
                 if (ownerMode) {
                     return workspace.ownerEmail === email && String(workspace.propertyIndex) === String(selectedPropertyIndex);
                 }
 
-                const matchesType = !type || workspace.type === type;
-                const matchesAvailability = !availability || workspace.availability === availability;
-                return matchesType && matchesAvailability;
+                const matchesType =
+                    !type || workspace.type === type;
+
+                const matchesAvailability =
+                    !availability ||
+                    workspace.availability === availability;
+
+                const searchableText = [
+                    workspace.type,
+                    workspace.address,
+                    workspace.neighborhood
+                ]
+                    .join(' ')
+                    .toLowerCase();
+
+                const matchesSearch =
+                    !searchTerm ||
+                    searchableText.includes(searchTerm);
+
+                return (
+                    matchesType &&
+                    matchesAvailability &&
+                    matchesSearch
+                );
             });
 
             const list = document.getElementById('workspaceList');
@@ -229,6 +283,14 @@
 
                 const actions = document.createElement('div');
                 actions.className = 'workspace-actions';
+
+                const detailsLink = document.createElement('a');
+                detailsLink.textContent = 'View Details';
+                detailsLink.href =
+                    `workspace-details.html?propertyIndex=${workspace.propertyIndex}` +
+                    `&workspaceIndex=${workspace.workspaceIndex}`;
+
+                actions.appendChild(detailsLink);
 
                 // Owners can manage listings; coworkers can only contact owners.
                 if (ownerMode) {
@@ -329,4 +391,5 @@
         loadWorkspaces();
     </script>
 </body>
+
 </html>
