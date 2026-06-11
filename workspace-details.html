@@ -452,6 +452,15 @@
         }
 
         const role = localStorage.getItem('role');
+        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
+            || (window.location.hostname.endsWith('github.io')
+                ? 'https://YOUR-RENDER-SERVICE.onrender.com'
+                : '');
+
+        function apiUrl(path) {
+            return `${API_BASE_URL}${path}`;
+        }
+
         const normalizedEmail = String(email || '').trim().toLowerCase();
         const params = new URLSearchParams(window.location.search);
         const propertyIndex = params.get('propertyIndex');
@@ -530,7 +539,7 @@
             contactSendBtn.textContent = 'Sending...';
 
             try {
-                const response = await fetch('/messages', {
+                const response = await fetch(apiUrl('/messages'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -583,7 +592,7 @@
             }
 
             try {
-                const response = await fetch('/workspaces');
+                const response = await fetch(apiUrl('/workspaces'));
                 const data = await response.json();
                 const workspaces = data.success ? data.workspaces : [];
 

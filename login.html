@@ -224,6 +224,15 @@
     </div>
 
     <script>
+        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
+            || (window.location.hostname.endsWith('github.io')
+                ? 'https://YOUR-RENDER-SERVICE.onrender.com'
+                : '');
+
+        function apiUrl(path) {
+            return `${API_BASE_URL}${path}`;
+        }
+
         function togglePasswordVisibility(inputId, buttonId) {
             const input = document.getElementById(inputId);
             const button = document.getElementById(buttonId);
@@ -236,7 +245,7 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
-            const res = await fetch('/login', {
+            const res = await fetch(apiUrl('/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
