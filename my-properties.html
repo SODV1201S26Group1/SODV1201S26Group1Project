@@ -194,10 +194,17 @@
         }
 
         .property-actions button {
+            width: 100%;
             padding: 0.625rem;
             border-radius: 0.3125rem;
             cursor: pointer;
             font-size: 0.875rem;
+        }
+
+        .edit-property-button {
+            grid-column: 1 / -1;
+            justify-self: center;
+            width: calc(50% - 0.3125rem);
         }
 
         .outline-button {
@@ -362,6 +369,10 @@
 
             .property-actions {
                 grid-template-columns: 1fr;
+            }
+
+            .edit-property-button {
+                width: 100%;
             }
 
             .page-actions {
@@ -587,14 +598,6 @@
 
                             <div class="property-actions">
                                 <button
-    type="button"
-    class="outline-button"
-    onclick="openEditModal(${globalIndex})"
->
-    Edit Property
-</button>
-
-                                <button
                                     class="filled-button"
                                     onclick="window.location.href=
                                     'add-workspace.html?propertyIndex=${globalIndex}'"
@@ -608,6 +611,14 @@
                                     onclick="window.location.href='workspaces.html?propertyIndex=${globalIndex}'"
                                 >
                                     Manage Workspaces
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="filled-button edit-property-button"
+                                    onclick="openEditModal(${globalIndex})"
+                                >
+                                    Edit Property
                                 </button>
                             </div>
                         </article>
