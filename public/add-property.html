@@ -144,6 +144,14 @@
     <script>
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
+        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
+            || (window.location.hostname.endsWith('github.io')
+                ? 'https://YOUR-RENDER-SERVICE.onrender.com'
+                : '');
+
+        function apiUrl(path) {
+            return `${API_BASE_URL}${path}`;
+        }
 
         if (!email || role !== 'owner') {
             window.location.replace('login.html');
@@ -174,7 +182,7 @@
                 return;
             }
 
-            const res = await fetch('/properties', {
+            const res = await fetch(apiUrl('/properties'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

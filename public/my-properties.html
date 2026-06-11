@@ -401,6 +401,14 @@
     <script>
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
+        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
+            || (window.location.hostname.endsWith('github.io')
+                ? 'https://YOUR-RENDER-SERVICE.onrender.com'
+                : '');
+
+        function apiUrl(path) {
+            return `${API_BASE_URL}${path}`;
+        }
 
         // Only logged-in owners can open this page.
         if (!email || role !== 'owner') {
@@ -414,7 +422,7 @@
 
             try {
                 const response = await fetch(
-                    '/properties?email=' + encodeURIComponent(email)
+                    apiUrl('/properties?email=' + encodeURIComponent(email))
                 );
 
                 const data = await response.json();
@@ -536,7 +544,7 @@
             const index = pendingDeleteIndex;
             closeModal();
             try {
-                const response = await fetch('/properties/' + index, {
+                const response = await fetch(apiUrl('/properties/' + index), {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'

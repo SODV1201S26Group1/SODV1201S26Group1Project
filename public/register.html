@@ -240,6 +240,15 @@
     </div>
 
     <script>
+        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
+            || (window.location.hostname.endsWith('github.io')
+                ? 'https://YOUR-RENDER-SERVICE.onrender.com'
+                : '');
+
+        function apiUrl(path) {
+            return `${API_BASE_URL}${path}`;
+        }
+
         function togglePasswordVisibility(inputId, buttonId) {
             const input = document.getElementById(inputId);
             const button = document.getElementById(buttonId);
@@ -263,7 +272,7 @@
                 return;
             }
 
-            const res = await fetch('/register', {
+            const res = await fetch(apiUrl('/register'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, phone, email, password, role })

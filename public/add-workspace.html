@@ -280,6 +280,15 @@
     <script>
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
+        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
+            || (window.location.hostname.endsWith('github.io')
+                ? 'https://YOUR-RENDER-SERVICE.onrender.com'
+                : '');
+
+        function apiUrl(path) {
+            return `${API_BASE_URL}${path}`;
+        }
+
         const params = new URLSearchParams(window.location.search);
         const selectedPropertyIndex = params.get('propertyIndex');
         const selectedWorkspaceIndex = params.get('workspaceIndex');
@@ -304,7 +313,7 @@
 
         // Load owner properties into dropdown
         async function loadProperties() {
-            const res = await fetch('/properties?email=' + encodeURIComponent(email));
+            const res = await fetch(apiUrl('/properties?email=' + encodeURIComponent(email)));
             
             const data = await res.json();
             const select = document.getElementById('propertyIndex');
@@ -339,7 +348,7 @@
             }
 
             try {
-                const res = await fetch('/workspaces');
+                const res = await fetch(apiUrl('/workspaces'));
                 const data = await res.json();
                 const normalizedEmail = String(email || '').trim().toLowerCase();
                 const workspace = (data.workspaces || []).find((w) => {
@@ -422,7 +431,7 @@
             saveBtn.textContent = isEditMode ? 'Updating...' : 'Saving...';
 
             try {
-                const res = await fetch(endpoint, {
+                const res = await fetch(apiUrl(endpoint), {
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price: parsedPrice })
