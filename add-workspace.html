@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -98,7 +99,8 @@
             color: #5b5bd6;
         }
 
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 0.75rem;
             margin-bottom: 0.9375rem;
@@ -208,6 +210,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <h1>Shared Workspace App</h1>
@@ -237,7 +240,7 @@
             </select>
 
             <label>Capacity</label>
-            <input type="number" id="capacity" placeholder="Enter number of people" min="1"/>
+            <input type="number" id="capacity" placeholder="Enter number of people" min="1" />
 
             <label>Smoking Allowed</label>
             <select id="smoking">
@@ -262,7 +265,7 @@
             </select>
 
             <label>Price (Whole Dollars)</label>
-            <input type="number" id="price" placeholder="Enter price amount" min="1" step="1"/>
+            <input type="number" id="price" placeholder="Enter price amount" min="1" step="1" />
 
             <p class="note">Whole dollars only (positive integers).</p>
 
@@ -301,12 +304,19 @@
 
         // Load owner properties into dropdown
         async function loadProperties() {
-            const res = await fetch('/properties?email=' + email);
+            const res = await fetch('/properties?email=' + encodeURIComponent(email));
+            
             const data = await res.json();
             const select = document.getElementById('propertyIndex');
+            
             data.properties.forEach((p, index) => {
                 const option = document.createElement('option');
-                option.value = index;
+
+                option.value =
+                    p.propertyIndex !== undefined
+                        ? p.propertyIndex
+                        : index;
+
                 option.textContent = p.address;
                 select.appendChild(option);
             });
@@ -470,4 +480,5 @@
         initWorkspaceForm();
     </script>
 </body>
+
 </html>
