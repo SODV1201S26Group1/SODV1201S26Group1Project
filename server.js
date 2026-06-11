@@ -7,6 +7,7 @@ Technical background: PLC programming and robotics systems.
 // ─── Dependencies ───────────────────────────────────────────────────────────
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const cors = require('cors');
 const app = express();
 
 // ─── In-Memory Data Store ────────────────────────────────────────────────────
@@ -33,6 +34,23 @@ function resetState() {
 }
 
 // ─── Middleware ─────────────────────────────────────────────────────────────
+app.use(cors({
+    origin(origin, callback) {
+        if (!origin) {
+            return callback(null, true);
+        }
+
+        if (origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000') {
+            return callback(null, true);
+        }
+
+        if (/^https:\/\/[a-z0-9-]+\.github\.io$/i.test(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error('Not allowed by CORS'));
+    }
+}));
 app.use(express.json());
 app.use(express.static('public'));
 

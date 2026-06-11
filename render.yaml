@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: sodv1201s26group1project-api
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
