@@ -29,11 +29,12 @@ nav {
 }
 
 .container {
-    max-width: 980px;
+    width: 90%;
+    max-width: 1200px;
     margin: 24px auto;
     padding: 0 16px;
     display: grid;
-    gap: 14px;
+    gap: 20px;
 }
 
 .card {
@@ -51,18 +52,24 @@ nav {
 }
 
 .filters select {
+    width: 100%;
     padding: 9px;
 }
 
 .workspace-list {
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
 }
 
 .workspace-item {
     position: relative;
+    width: 100%;
     background: #fafafa;
-    padding: 14px;
+    padding: 18px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
 }
 
 .workspace-delete-icon {
@@ -83,6 +90,7 @@ nav {
 .workspace-title {
     font-weight: bold;
     margin-bottom: 6px;
+    padding-right: 40px;
 }
 
 .workspace-meta {
@@ -92,6 +100,7 @@ nav {
 
 .workspace-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-top: 12px;
 }
@@ -173,8 +182,41 @@ nav {
     color: #fff;
 }
 
+@media (max-width: 1000px) {
+    .workspace-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 720px) {
+    nav {
+        padding: 15px;
+    }
+
+    .nav-actions {
+        flex-wrap: wrap;
+    }
+
+    .container {
+        width: 100%;
+        padding: 0 12px;
+    }
+
     .filters {
         grid-template-columns: 1fr;
+    }
+
+    .workspace-list {
+        grid-template-columns: 1fr;
+    }
+
+    .workspace-actions {
+        flex-direction: column;
+    }
+
+    .workspace-actions button,
+    .workspace-actions a {
+        width: 100%;
+        text-align: center;
     }
 }
