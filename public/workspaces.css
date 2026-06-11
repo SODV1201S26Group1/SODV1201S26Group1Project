@@ -37,14 +37,23 @@ nav {
     gap: 20px;
 }
 
-.card {
-    padding: 16px;
+.container > .card {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .filters {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
 }
 
 .filters label {
@@ -66,7 +75,9 @@ nav {
 .workspace-item {
     position: relative;
     width: 100%;
-    background: #fafafa;
+    min-width: 0;
+    box-sizing: border-box;
+    background: #fff;
     padding: 18px;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -81,6 +92,7 @@ nav {
     color: #5b5bd6;
     font-size: 18px;
     line-height: 1;
+    cursor: pointer;
 }
 
 .workspace-delete-icon:hover {
