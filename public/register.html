@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,7 +80,8 @@
             color: #5b5bd6;
         }
 
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 0.75rem;
             margin-bottom: 0.9375rem;
@@ -154,8 +156,16 @@
 
         #message {
             text-align: center;
+            margin-top: 10px;
+            min-height: 18px;
+        }
+
+        .success-message {
+            color: green;
+        }
+
+        .error-message {
             color: red;
-            margin-top: 0.625rem;
         }
 
         @media (max-width: 35rem) {
@@ -177,6 +187,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <h1>Shared Workspace App</h1>
@@ -190,24 +201,26 @@
             <h2>Create Account</h2>
 
             <label>Full Name</label>
-            <input type="text" id="name" placeholder="Enter your full name"/>
+            <input type="text" id="name" placeholder="Enter your full name" />
 
             <label>Phone Number</label>
-            <input type="text" id="phone" placeholder="Enter your phone number"/>
+            <input type="text" id="phone" placeholder="Enter your phone number" />
 
             <label>Email / Username</label>
-            <input type="email" id="email" placeholder="Enter your email or username"/>
+            <input type="email" id="email" placeholder="Enter your email or username" />
 
             <label>Password</label>
             <div class="password-field">
-                <input type="password" id="password" placeholder="Enter your password"/>
-                <button type="button" class="password-toggle" id="togglePasswordBtn" onclick="togglePasswordVisibility('password', 'togglePasswordBtn')">Show</button>
+                <input type="password" id="password" placeholder="Enter your password" />
+                <button type="button" class="password-toggle" id="togglePasswordBtn"
+                    onclick="togglePasswordVisibility('password', 'togglePasswordBtn')">Show</button>
             </div>
 
             <label>Confirm Password</label>
             <div class="password-field">
-                <input type="password" id="confirmPassword" placeholder="Re-enter your password"/>
-                <button type="button" class="password-toggle" id="toggleConfirmPasswordBtn" onclick="togglePasswordVisibility('confirmPassword', 'toggleConfirmPasswordBtn')">Show</button>
+                <input type="password" id="confirmPassword" placeholder="Re-enter your password" />
+                <button type="button" class="password-toggle" id="toggleConfirmPasswordBtn"
+                    onclick="togglePasswordVisibility('confirmPassword', 'toggleConfirmPasswordBtn')">Show</button>
             </div>
 
             <label>Role</label>
@@ -242,9 +255,11 @@
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const role = document.getElementById('role').value;
+            const message = document.getElementById('message');
 
             if (password !== confirmPassword) {
-                document.getElementById('message').textContent = 'Passwords do not match!';
+                message.className = 'error-message';
+                message.textContent = 'Passwords do not match!';
                 return;
             }
 
@@ -254,12 +269,20 @@
                 body: JSON.stringify({ name, phone, email, password, role })
             });
             const data = await res.json();
-            document.getElementById('message').textContent = data.message;
 
             if (data.success) {
-                window.location.href = 'login.html';
+                message.className = 'success-message';
+                message.textContent = data.message;
+
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 800);
+            } else {
+                message.className = 'error-message';
+                message.textContent = data.message;
             }
         }
     </script>
 </body>
+
 </html>
