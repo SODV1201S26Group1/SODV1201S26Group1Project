@@ -256,7 +256,7 @@
             padding: 2rem;
             max-width: 24rem;
             width: 90%;
-            box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.15);
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
         }
 
         .modal h3 {
@@ -270,6 +270,33 @@
             color: #444;
             margin-bottom: 1.25rem;
             line-height: 1.5;
+        }
+
+        .edit-form {
+            display: grid;
+            gap: 0.875rem;
+        }
+
+        .edit-form label {
+            display: block;
+            margin-bottom: 0.3125rem;
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+
+        .edit-form input,
+        .edit-form select {
+            width: 100%;
+            padding: 0.625rem;
+            border: 0.0625rem solid #bbb;
+            border-radius: 0.3125rem;
+            font-size: 0.875rem;
+        }
+
+        .edit-message {
+            min-height: 1.125rem;
+            color: #b00020;
+            font-size: 0.875rem;
         }
 
         .modal-actions {
@@ -290,6 +317,7 @@
         }
 
         @media (max-width: 50rem) {
+
             nav,
             .page-header,
             footer {
@@ -393,6 +421,63 @@
         </div>
     </div>
 
+    <!-- Edit property modal -->
+    <div class="modal-backdrop" id="editModal">
+        <div class="modal">
+            <h3>Edit Property</h3>
+
+            <form id="editPropertyForm" class="edit-form">
+                <div>
+                    <label for="editAddress">Address</label>
+                    <input id="editAddress" type="text" required>
+                </div>
+
+                <div>
+                    <label for="editNeighborhood">Neighborhood</label>
+                    <input id="editNeighborhood" type="text" required>
+                </div>
+
+                <div>
+                    <label for="editSquareFootage">Square Footage</label>
+                    <input id="editSquareFootage" type="number" min="1" step="1" required>
+                </div>
+
+                <div>
+                    <label for="editGarage">Garage</label>
+                    <select id="editGarage" required>
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="editPublicTransport">
+                        Public Transport
+                    </label>
+
+                    <select id="editPublicTransport" required>
+                        <option value="">Select</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <p id="editMessage" class="edit-message"></p>
+
+                <div class="modal-actions">
+                    <button type="button" class="outline-button" onclick="closeEditModal()">
+                        Cancel
+                    </button>
+
+                    <button type="submit" class="filled-button">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <footer>
         <span>SODV1201 Group 1 — Shared Workspace App</span>
         <span>GitHub Repository | Contact Information</span>
@@ -410,6 +495,9 @@
             return `${API_BASE_URL}${path}`;
         }
 
+        let loadedProperties = [];
+        let pendingEditIndex = null;
+
         // Only logged-in owners can open this page.
         if (!email || role !== 'owner') {
             window.location.replace('login.html');
@@ -426,9 +514,11 @@
                 );
 
                 const data = await response.json();
+
+                loadedProperties = data.properties || [];
                 list.innerHTML = '';
 
-                if (!data.properties || data.properties.length === 0) {
+                if (loadedProperties.length === 0) {
                     list.innerHTML = `
                         <p class="empty-message">
                             No properties yet. Select "Add New Property"
@@ -438,15 +528,15 @@
                     return;
                 }
 
-                data.properties.forEach((property, index) => {
-                    const globalIndex = property.globalIndex !== undefined ? property.globalIndex : index;
+                loadedProperties.forEach((property, index) => {
+                    const globalIndex = property.propertyIndex !== undefined ? property.propertyIndex : index;
                     list.innerHTML += `
                         <article class="property-card">
                             <button
                                 class="delete-icon-button"
                                 type="button"
                                 aria-label="Delete property"
-                                onclick="deleteProperty(${index})"
+                                onclick="deleteProperty(${globalIndex})"
                             >
                                 <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M3 6h18"></path>
@@ -463,8 +553,8 @@
                                 <span class="status-label">
                                     Workspaces:
                                     ${property.workspaces
-                                        ? property.workspaces.length
-                                        : 0}
+                            ? property.workspaces.length
+                            : 0}
                                 </span>
                             </div>
 
@@ -496,6 +586,14 @@
                             </div>
 
                             <div class="property-actions">
+                                <button
+    type="button"
+    class="outline-button"
+    onclick="openEditModal(${globalIndex})"
+>
+    Edit Property
+</button>
+
                                 <button
                                     class="filled-button"
                                     onclick="window.location.href=
@@ -564,6 +662,122 @@
                 console.error('Error deleting property:', error);
             }
         });
+        function openEditModal(propertyIndex) {
+            const property = loadedProperties.find(item => {
+                const itemIndex =
+                    item.propertyIndex !== undefined
+                        ? item.propertyIndex
+                        : loadedProperties.indexOf(item);
+
+                return itemIndex === propertyIndex;
+            });
+
+            if (!property) {
+                alert('The property could not be found.');
+                return;
+            }
+
+            pendingEditIndex = propertyIndex;
+
+            document.getElementById('editAddress').value =
+                property.address || '';
+
+            document.getElementById('editNeighborhood').value =
+                property.neighborhood || '';
+
+            document.getElementById('editSquareFootage').value =
+                property.squareFootage || '';
+
+            document.getElementById('editGarage').value =
+                property.garage || '';
+
+            document.getElementById('editPublicTransport').value =
+                property.publicTransport || '';
+
+            document.getElementById('editMessage').textContent = '';
+
+            document.getElementById('editModal').classList.add('visible');
+        }
+
+        function closeEditModal() {
+            pendingEditIndex = null;
+            document.getElementById('editMessage').textContent = '';
+            document.getElementById('editModal').classList.remove('visible');
+        }
+
+        document
+            .getElementById('editPropertyForm')
+            .addEventListener('submit', async event => {
+                event.preventDefault();
+
+                if (pendingEditIndex === null) {
+                    return;
+                }
+
+                const payload = {
+                    email,
+                    address: document
+                        .getElementById('editAddress')
+                        .value
+                        .trim(),
+
+                    neighborhood: document
+                        .getElementById('editNeighborhood')
+                        .value
+                        .trim(),
+
+                    squareFootage: document
+                        .getElementById('editSquareFootage')
+                        .value,
+
+                    garage: document
+                        .getElementById('editGarage')
+                        .value,
+
+                    publicTransport: document
+                        .getElementById('editPublicTransport')
+                        .value
+                };
+
+                const message =
+                    document.getElementById('editMessage');
+
+                message.textContent = '';
+
+                try {
+                    const response = await fetch(
+                        '/properties/' + pendingEditIndex,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        message.textContent =
+                            data.message ||
+                            'The property could not be updated.';
+
+                        return;
+                    }
+
+                    closeEditModal();
+                    loadProperties();
+                } catch (error) {
+                    message.textContent =
+                        'The property could not be updated.';
+
+                    console.error(
+                        'Error updating property:',
+                        error
+                    );
+                }
+            });
 
         function logout() {
             localStorage.clear();
