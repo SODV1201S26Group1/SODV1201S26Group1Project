@@ -1,6 +1,7 @@
 {
   "name": "sodv1201s26group1project",
   "version": "1.0.0",
+  "packageManager": "pnpm@10.17.1",
   "description": "Group 1 final project repository for SODV1201 Web Programming, Spring 2026 at Bow Valley College.",
   "main": "server.js",
   "scripts": {
