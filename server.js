@@ -36,7 +36,6 @@ if (!JWT_SECRET) {
 // ─── In-Memory Data Store ───────────────────────────────────────────────────
 const users = [];
 const properties = [];
-const contactMessages = [];
 
 const normalizeEmail = value =>
     String(value || '').trim().toLowerCase();
@@ -81,9 +80,12 @@ const isValidPassword = value =>
 function resetState() {
     users.length = 0;
     properties.length = 0;
-    contactMessages.length = 0;
     loginAttempts.clear();
     nextPropertyId = 1;
+
+    pool.query('DELETE FROM contact_messages_v2').catch(() => {
+        // Keep resetState non-throwing for existing test flows.
+    });
 }
 
 // ─── Middleware ─────────────────────────────────────────────────────────────
@@ -1072,7 +1074,7 @@ app.get('/workspaces', (req, res) => {
 });
 
 // ─── Contact Message Routes ────────────────────────────────────────────────
-app.post('/messages', (req, res) => {
+app.post('/messages', async (req, res) => {
     const {
         fromEmail,
         toEmail,
@@ -1096,11 +1098,21 @@ app.post('/messages', (req, res) => {
     const normalizedMessage =
         String(message || '').trim();
 
+    const parsedPropertyIndex =
+        Number(propertyIndex);
+
+    const parsedWorkspaceIndex =
+        Number(workspaceIndex);
+
     if (
         !normalizedToEmail ||
         !normalizedSenderName ||
         !normalizedSenderEmail ||
-        !normalizedMessage
+        !normalizedMessage ||
+        !Number.isInteger(parsedPropertyIndex) ||
+        parsedPropertyIndex < 0 ||
+        !Number.isInteger(parsedWorkspaceIndex) ||
+        parsedWorkspaceIndex < 0
     ) {
         return res.json({
             success: false,
@@ -1109,30 +1121,154 @@ app.post('/messages', (req, res) => {
         });
     }
 
-    contactMessages.push({
-        fromEmail:
-            String(fromEmail || '').trim(),
-        toEmail: normalizedToEmail,
-        senderName:
-            normalizedSenderName,
-        senderEmail:
-            normalizedSenderEmail,
-        message: normalizedMessage,
-        propertyIndex,
-        workspaceIndex,
-        workspaceType:
-            String(
-                workspaceType || ''
-            ).trim(),
-        createdAt:
-            new Date().toISOString()
-    });
+    const matchingProperty =
+        properties[parsedPropertyIndex];
+
+    if (matchingProperty) {
+        const matchingWorkspace =
+            matchingProperty.workspaces?.[
+                parsedWorkspaceIndex
+            ];
+
+        if (!matchingWorkspace) {
+            return res.json({
+                success: false,
+                message: 'Workspace not found.'
+            });
+        }
+
+        if (
+            normalizeEmail(
+                matchingProperty.email
+            ) !==
+            normalizeEmail(
+                normalizedToEmail
+            )
+        ) {
+            return res.json({
+                success: false,
+                message:
+                    'Owner and workspace do not match.'
+            });
+        }
+    }
+
+    const normalizedWorkspaceType =
+        String(
+            workspaceType || ''
+        ).trim();
+
+    try {
+        await pool.query(
+            `
+                INSERT INTO contact_messages_v2 (
+                    from_email,
+                    to_email,
+                    sender_name,
+                    sender_email,
+                    message,
+                    property_index,
+                    workspace_index,
+                    workspace_type
+                )
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7,
+                    $8
+                )
+            `,
+            [
+                normalizeEmail(fromEmail),
+                normalizeEmail(
+                    normalizedToEmail
+                ),
+                normalizedSenderName,
+                normalizeEmail(
+                    normalizedSenderEmail
+                ),
+                normalizedMessage,
+                parsedPropertyIndex,
+                parsedWorkspaceIndex,
+                normalizedWorkspaceType
+            ]
+        );
+    } catch (error) {
+        console.error(
+            'Message save failed:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                'Message could not be saved.'
+        });
+    }
 
     return res.json({
         success: true,
         message:
             'Message sent to owner.'
     });
+});
+
+app.get('/messages', async (req, res) => {
+    const ownerEmail =
+        normalizeEmail(
+            req.query.ownerEmail ||
+                req.query.toEmail
+        );
+
+    if (!ownerEmail) {
+        return res.status(400).json({
+            success: false,
+            message:
+                'ownerEmail is required.'
+        });
+    }
+
+    try {
+        const result = await pool.query(
+            `
+                SELECT
+                    id,
+                    from_email AS "fromEmail",
+                    to_email AS "toEmail",
+                    sender_name AS "senderName",
+                    sender_email AS "senderEmail",
+                    message,
+                    property_index AS "propertyIndex",
+                    workspace_index AS "workspaceIndex",
+                    workspace_type AS "workspaceType",
+                    created_at AS "createdAt"
+                FROM contact_messages_v2
+                WHERE to_email = $1
+                ORDER BY id DESC
+            `,
+            [ownerEmail]
+        );
+
+        return res.json({
+            success: true,
+            messages: result.rows
+        });
+    } catch (error) {
+        console.error(
+            'Message load failed:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                'Messages could not be loaded.'
+        });
+    }
 });
 
 // ─── Server Start ──────────────────────────────────────────────────────────

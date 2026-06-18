@@ -34,6 +34,11 @@ Implement persistent message storage and lifecycle management:
 4. Add anti-spam safeguards (rate limiting, caps).
 5. Add owner message management (list, archive/delete).
 
+### Final Submission Note
+- The owner inbox/message viewer is not required by the current issue list.
+- Treat it as optional final submission polish only if time allows.
+- The required message-sending flow is already implemented and tested.
+
 ### PR Checklist
 - [x] Functional implementation complete for Issue 23 scope.
 - [x] Manual smoke testing completed for core flows.

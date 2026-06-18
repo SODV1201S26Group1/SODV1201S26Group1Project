@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -192,7 +191,6 @@
         }
     </style>
 </head>
-
 <body>
     <nav>
         <h1>Shared Workspace App</h1>
@@ -207,13 +205,12 @@
             <p class="subtitle">Sign in to continue.</p>
 
             <label>Email / Username</label>
-            <input type="email" id="email" placeholder="Enter your email or username" />
+            <input type="email" id="email" placeholder="Enter your email or username"/>
 
             <label>Password</label>
             <div class="password-field">
-                <input type="password" id="password" placeholder="Enter your password" />
-                <button type="button" class="password-toggle form-button" id="togglePasswordBtn"
-                    onclick="togglePasswordVisibility('password', 'togglePasswordBtn')">Show</button>
+                <input type="password" id="password" placeholder="Enter your password"/>
+                <button type="button" class="password-toggle form-button" id="togglePasswordBtn" onclick="togglePasswordVisibility('password', 'togglePasswordBtn')">Show</button>
             </div>
 
             <p id="message"></p>
@@ -226,84 +223,55 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
-
         function togglePasswordVisibility(inputId, buttonId) {
             const input = document.getElementById(inputId);
             const button = document.getElementById(buttonId);
             const show = input.type === 'password';
-
             input.type = show ? 'text' : 'password';
             button.textContent = show ? 'Hide' : 'Show';
         }
 
         async function login() {
-            const emailInput = document.getElementById('email');
-            const passwordInput = document.getElementById('password');
-            const message = document.getElementById('message');
-
-            const email = emailInput.value.trim().toLowerCase();
-            const password = passwordInput.value;
-
-            message.textContent = '';
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageEl = document.getElementById('message');
 
             if (!email || !password) {
-                message.textContent = 'Email and password are required.';
+                messageEl.textContent = 'Email and password are required.';
                 return;
             }
 
-            try {
-                const response = await fetch(apiUrl('/login'), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email,
-                        password
-                    })
-                });
+            const response = await apiPost('/login', { email, password });
 
-                const data = await response.json();
+            if (!response) {
+                messageEl.textContent = 'Login failed. Please try again.';
+                return;
+            }
 
-                if (!data.success || !data.token) {
-                    message.textContent =
-                        data.message || 'Login failed.';
+            const { status, data } = response;
 
-                    return;
-                }
+            if (data.success) {
+                // Store token and user info
+                setToken(data.token);
+                localStorage.setItem('userId', data.user?.id || '');
+                localStorage.setItem('email', data.user?.email || email);
+                localStorage.setItem('role', data.user?.role || '');
+                localStorage.setItem('name', data.user?.name || '');
 
-                const userRole =
-                    data.user?.role || data.role;
+                messageEl.textContent = '';
 
-                const userEmail =
-                    data.user?.email || email;
-
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('role', userRole);
-                localStorage.setItem('email', userEmail);
-
-                if (userRole === 'owner') {
+                // Redirect based on role
+                if (data.user?.role === 'owner') {
                     window.location.href = 'my-properties.html';
                 } else {
                     window.location.href = 'workspaces.html';
                 }
-            } catch (error) {
-                message.textContent =
-                    'Could not connect to the server.';
-
-                console.error('Login error:', error);
+            } else {
+                messageEl.textContent = data.message || 'Login failed.';
             }
         }
     </script>
 </body>
-
 </html>

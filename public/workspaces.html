@@ -112,26 +112,16 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
+        requireAuth();
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
 
         const params = new URLSearchParams(window.location.search);
         const selectedPropertyIndex = params.get('propertyIndex');
         const ownerMode = role === 'owner' && selectedPropertyIndex !== null;
         const initialSearchTerm = params.get('search') || '';
-
-        if (!email) {
-            window.location.href = 'login.html';
-        }
 
         let workspaces = [];
         let workspaceBeingEdited = null;
@@ -168,7 +158,7 @@
         }
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.clear();
+            clearAuth();
             window.location.href = 'login.html';
         });
 
@@ -195,8 +185,14 @@
         document.getElementById('deleteConfirmBtn').addEventListener('click', confirmDeleteWorkspace);
 
         async function loadWorkspaces() {
-            const res = await fetch(apiUrl('/workspaces'));
-            const data = await res.json();
+            const response = await apiGet('/workspaces');
+            if (!response) {
+                workspaces = [];
+                renderWorkspaces();
+                return;
+            }
+
+            const { data } = response;
             workspaces = data.success ? data.workspaces : [];
             renderWorkspaces();
         }
@@ -349,13 +345,17 @@
             const leaseTerm = document.getElementById('editLeaseTerm').value;
             const price = document.getElementById('editPrice').value;
 
-            const res = await fetch(apiUrl(`/workspaces/${workspaceBeingEdited.propertyIndex}/${workspaceBeingEdited.workspaceIndex}`), {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, type, capacity, smoking, availability, leaseTerm, price })
-            });
+            const response = await apiPut(
+                `/workspaces/${workspaceBeingEdited.propertyIndex}/${workspaceBeingEdited.workspaceIndex}`,
+                { email, type, capacity, smoking, availability, leaseTerm, price }
+            );
 
-            const data = await res.json();
+            if (!response) {
+                setMessage('Could not update workspace.');
+                return;
+            }
+
+            const { data } = response;
             setMessage(data.message || 'Workspace update complete.');
             if (data.success) {
                 closeEditModal();
@@ -364,13 +364,16 @@
         }
 
         async function deleteWorkspace(workspace) {
-            const res = await fetch(apiUrl(`/workspaces/${workspace.propertyIndex}/${workspace.workspaceIndex}`), {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
+            const response = await apiDelete(
+                `/workspaces/${workspace.propertyIndex}/${workspace.workspaceIndex}`
+            );
 
-            const data = await res.json();
+            if (!response) {
+                setMessage('Could not delete workspace.');
+                return;
+            }
+
+            const { data } = response;
             setMessage(data.message || 'Workspace delete complete.');
             if (data.success) {
                 loadWorkspaces();

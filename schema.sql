@@ -56,3 +56,18 @@ CREATE TABLE IF NOT EXISTS contact_messages (
     message TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS contact_messages_v2 (
+    id SERIAL PRIMARY KEY,
+    from_email VARCHAR(255) NOT NULL,
+    to_email VARCHAR(255) NOT NULL,
+    sender_name VARCHAR(100) NOT NULL,
+    sender_email VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    property_index INTEGER NOT NULL
+        CHECK (property_index >= 0),
+    workspace_index INTEGER NOT NULL
+        CHECK (workspace_index >= 0),
+    workspace_type VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);

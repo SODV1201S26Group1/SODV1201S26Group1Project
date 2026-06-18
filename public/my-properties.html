@@ -494,341 +494,220 @@
         <span>GitHub Repository | Contact Information</span>
     </footer>
 
+    <script src="auth.js"></script>
     <script>
-        const email = localStorage.getItem('email');
+        // Require owner authentication
+        requireAuth();
         const role = localStorage.getItem('role');
-        const token = localStorage.getItem('token');
-
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
-
-        function authorizationHeaders(includeJson = false) {
-            const headers = {
-                'Authorization': `Bearer ${token}`
-            };
-
-            if (includeJson) {
-                headers['Content-Type'] = 'application/json';
-            }
-
-            return headers;
-        }
-
-        function returnToLogin() {
-            localStorage.clear();
+        if (role !== 'owner') {
             window.location.replace('login.html');
-        }
-
-        function getPropertyId(property) {
-            return Number(
-                property.id ??
-                property.propertyId ??
-                property.propertyIndex
-            );
-        }
-
-        let loadedProperties = [];
-        let pendingEditId = null;
-        let pendingDeleteId = null;
-
-        if (!email || role !== 'owner' || !token) {
-            returnToLogin();
         } else {
             loadProperties();
         }
 
+        const email = localStorage.getItem('email');
+
+        let loadedProperties = [];
+        let pendingEditIndex = null;
+
         async function loadProperties() {
-            const list =
-                document.getElementById('properties-list');
+            const list = document.getElementById('properties-list');
 
             try {
-                const response = await fetch(
-                    apiUrl('/properties'),
-                    {
-                        headers: authorizationHeaders()
-                    }
-                );
+                const response = await apiGet('/properties');
 
-                if (
-                    response.status === 401 ||
-                    response.status === 403
-                ) {
-                    returnToLogin();
-                    return;
+                if (!response) {
+                    throw new Error('Failed to load properties');
                 }
 
-                const data = await response.json();
-
-                if (!data.success) {
-                    throw new Error(
-                        data.message ||
-                        'Properties could not be loaded.'
-                    );
-                }
-
-                loadedProperties =
-                    data.properties || [];
-
+                const { data } = response;
+                loadedProperties = data.properties || [];
                 list.innerHTML = '';
 
                 if (loadedProperties.length === 0) {
                     list.innerHTML = `
-                    <p class="empty-message">
-                        No properties yet. Select "Add New Property"
-                        to create your first property.
-                    </p>
-                `;
-
+                        <p class="empty-message">
+                            No properties yet. Select "Add New Property"
+                            to create your first property.
+                        </p>
+                    `;
                     return;
                 }
 
-                loadedProperties.forEach(property => {
-                    const propertyId =
-                        getPropertyId(property);
-
-                    const workspaceCount =
-                        property.workspaceCount ??
-                        property.workspaces?.length ??
-                        0;
-
+                loadedProperties.forEach((property, index) => {
+                    const globalIndex = property.propertyIndex !== undefined ? property.propertyIndex : index;
                     list.innerHTML += `
-                    <article class="property-card">
-                        <button
-                            class="delete-icon-button"
-                            type="button"
-                            aria-label="Delete property"
-                            onclick="deleteProperty(${propertyId})"
-                        >
-                            <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M3 6h18"></path>
-                                <path d="M8 6V4h8v2"></path>
-                                <path d="M19 6l-1 14H6L5 6"></path>
-                                <path d="M10 11v6"></path>
-                                <path d="M14 11v6"></path>
-                            </svg>
-                        </button>
-
-                        <div class="property-status">
-                            <span class="status-label">
-                                Active
-                            </span>
-
-                            <span class="status-label">
-                                Workspaces: ${workspaceCount}
-                            </span>
-                        </div>
-
-                        <div class="property-details">
-                            <p>
-                                <strong>Address:</strong>
-                                ${property.address}
-                            </p>
-
-                            <p>
-                                <strong>Neighborhood:</strong>
-                                ${property.neighborhood}
-                            </p>
-
-                            <p>
-                                <strong>Square Footage:</strong>
-                                ${property.squareFootage}
-                            </p>
-
-                            <p>
-                                <strong>Garage:</strong>
-                                ${property.garage}
-                            </p>
-
-                            <p>
-                                <strong>Public Transport:</strong>
-                                ${property.publicTransport}
-                            </p>
-                        </div>
-
-                        <div class="property-actions">
+                        <article class="property-card">
                             <button
-                                class="filled-button"
+                                class="delete-icon-button"
                                 type="button"
-                                onclick="window.location.href=
-                                'add-workspace.html?propertyIndex=${propertyId}'"
+                                aria-label="Delete property"
+                                onclick="deleteProperty(${globalIndex})"
                             >
-                                Add Workspace
+                                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M8 6V4h8v2"></path>
+                                    <path d="M19 6l-1 14H6L5 6"></path>
+                                    <path d="M10 11v6"></path>
+                                    <path d="M14 11v6"></path>
+                                </svg>
                             </button>
 
-                            <button
-                                class="filled-button"
-                                type="button"
-                                onclick="window.location.href=
-                                'workspaces.html?propertyIndex=${propertyId}'"
-                            >
-                                Manage Workspaces
-                            </button>
+                            <div class="property-status">
+                                <span class="status-label">Active</span>
 
-                            <button
-                                class="filled-button edit-property-button"
-                                type="button"
-                                onclick="openEditModal(${propertyId})"
-                            >
-                                Edit Property
-                            </button>
-                        </div>
-                    </article>
-                `;
+                                <span class="status-label">
+                                    Workspaces:
+                                    ${property.workspaces
+                            ? property.workspaces.length
+                            : 0}
+                                </span>
+                            </div>
+
+                            <div class="property-details">
+                                <p>
+                                    <strong>Address:</strong>
+                                    ${property.address}
+                                </p>
+
+                                <p>
+                                    <strong>Neighborhood:</strong>
+                                    ${property.neighborhood}
+                                </p>
+
+                                <p>
+                                    <strong>Square Footage:</strong>
+                                    ${property.squareFootage}
+                                </p>
+
+                                <p>
+                                    <strong>Garage:</strong>
+                                    ${property.garage}
+                                </p>
+
+                                <p>
+                                    <strong>Public Transport:</strong>
+                                    ${property.publicTransport}
+                                </p>
+                            </div>
+
+                            <div class="property-actions">
+                                <button
+                                    class="filled-button"
+                                    onclick="window.location.href=
+                                    'add-workspace.html?propertyIndex=${globalIndex}'"
+                                >
+                                    Add Workspace
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="filled-button"
+                                    onclick="window.location.href='workspaces.html?propertyIndex=${globalIndex}'"
+                                >
+                                    Manage Workspaces
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="filled-button edit-property-button"
+                                    onclick="openEditModal(${globalIndex})"
+                                >
+                                    Edit Property
+                                </button>
+                            </div>
+                        </article>
+                    `;
                 });
             } catch (error) {
                 list.innerHTML = `
-                <p class="error-message">
-                    Properties could not be loaded.
-                    Please try again.
-                </p>
-            `;
+                    <p class="error-message">
+                        Properties could not be loaded.
+                        Please try again.
+                    </p>
+                `;
 
-                console.error(
-                    'Error loading properties:',
-                    error
-                );
+                console.error('Error loading properties:', error);
             }
         }
 
-        function deleteProperty(propertyId) {
-            pendingDeleteId = propertyId;
+        let pendingDeleteIndex = null;
 
-            document
-                .getElementById('confirmModal')
-                .classList
-                .add('visible');
+        function deleteProperty(index) {
+            pendingDeleteIndex = index;
+            document.getElementById('confirmModal').classList.add('visible');
         }
 
         function closeModal() {
-            pendingDeleteId = null;
-
-            document
-                .getElementById('confirmModal')
-                .classList
-                .remove('visible');
+            pendingDeleteIndex = null;
+            document.getElementById('confirmModal').classList.remove('visible');
         }
 
-        document
-            .getElementById('confirmDeleteBtn')
-            .addEventListener('click', async () => {
-                if (pendingDeleteId === null) {
-                    return;
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+            if (pendingDeleteIndex === null) return;
+            const index = pendingDeleteIndex;
+            closeModal();
+            try {
+                const response = await apiDelete(`/properties/${index}`);
+
+                if (!response) {
+                    throw new Error('Failed to delete property');
                 }
 
-                const propertyId = pendingDeleteId;
+                const { data } = response;
 
-                closeModal();
-
-                try {
-                    const response = await fetch(
-                        apiUrl('/properties/' + propertyId),
-                        {
-                            method: 'DELETE',
-                            headers: authorizationHeaders()
-                        }
-                    );
-
-                    if (
-                        response.status === 401 ||
-                        response.status === 403
-                    ) {
-                        returnToLogin();
-                        return;
-                    }
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        loadProperties();
-                    } else {
-                        alert(
-                            data.message ||
-                            'The property could not be deleted.'
-                        );
-                    }
-                } catch (error) {
-                    alert(
-                        'The property could not be deleted.'
-                    );
-
-                    console.error(
-                        'Error deleting property:',
-                        error
-                    );
+                if (data.success) {
+                    loadProperties();
+                } else {
+                    alert(data.message || 'The property could not be deleted.');
                 }
+            } catch (error) {
+                alert('The property could not be deleted.');
+                console.error('Error deleting property:', error);
+            }
+        });
+
+        function openEditModal(propertyIndex) {
+            const property = loadedProperties.find(item => {
+                const itemIndex =
+                    item.propertyIndex !== undefined
+                        ? item.propertyIndex
+                        : loadedProperties.indexOf(item);
+
+                return itemIndex === propertyIndex;
             });
 
-        function openEditModal(propertyId) {
-            const property =
-                loadedProperties.find(item =>
-                    getPropertyId(item) ===
-                    Number(propertyId)
-                );
-
             if (!property) {
-                alert(
-                    'The property could not be found.'
-                );
-
+                alert('The property could not be found.');
                 return;
             }
 
-            pendingEditId = propertyId;
+            pendingEditIndex = propertyIndex;
 
-            document
-                .getElementById('editAddress')
-                .value = property.address || '';
+            document.getElementById('editAddress').value =
+                property.address || '';
 
-            document
-                .getElementById('editNeighborhood')
-                .value = property.neighborhood || '';
+            document.getElementById('editNeighborhood').value =
+                property.neighborhood || '';
 
-            document
-                .getElementById('editSquareFootage')
-                .value = property.squareFootage || '';
+            document.getElementById('editSquareFootage').value =
+                property.squareFootage || '';
 
-            document
-                .getElementById('editGarage')
-                .value = property.garage || '';
+            document.getElementById('editGarage').value =
+                property.garage || '';
 
-            document
-                .getElementById('editPublicTransport')
-                .value = property.publicTransport || '';
+            document.getElementById('editPublicTransport').value =
+                property.publicTransport || '';
 
-            document
-                .getElementById('editMessage')
-                .textContent = '';
+            document.getElementById('editMessage').textContent = '';
 
-            document
-                .getElementById('editModal')
-                .classList
-                .add('visible');
+            document.getElementById('editModal').classList.add('visible');
         }
 
         function closeEditModal() {
-            pendingEditId = null;
-
-            document
-                .getElementById('editMessage')
-                .textContent = '';
-
-            document
-                .getElementById('editModal')
-                .classList
-                .remove('visible');
+            pendingEditIndex = null;
+            document.getElementById('editMessage').textContent = '';
+            document.getElementById('editModal').classList.remove('visible');
         }
 
         document
@@ -836,14 +715,12 @@
             .addEventListener('submit', async event => {
                 event.preventDefault();
 
-                if (pendingEditId === null) {
+                if (pendingEditIndex === null) {
                     return;
                 }
 
-                const message =
-                    document.getElementById('editMessage');
-
                 const payload = {
+                    email,
                     address: document
                         .getElementById('editAddress')
                         .value
@@ -867,28 +744,22 @@
                         .value
                 };
 
+                const message =
+                    document.getElementById('editMessage');
+
                 message.textContent = '';
 
                 try {
-                    const response = await fetch(
-                        apiUrl('/properties/' + pendingEditId),
-                        {
-                            method: 'PUT',
-                            headers:
-                                authorizationHeaders(true),
-                            body: JSON.stringify(payload)
-                        }
+                    const response = await apiPut(
+                        `/properties/${pendingEditIndex}`,
+                        payload
                     );
 
-                    if (
-                        response.status === 401 ||
-                        response.status === 403
-                    ) {
-                        returnToLogin();
-                        return;
+                    if (!response) {
+                        throw new Error('Failed to update property');
                     }
 
-                    const data = await response.json();
+                    const { data } = response;
 
                     if (!data.success) {
                         message.textContent =
@@ -911,10 +782,10 @@
                 }
             });
 
-        function logout() {
-            localStorage.clear();
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            clearAuth();
             window.location.href = 'login.html';
-        }
+        });
     </script>
 </body>
 
