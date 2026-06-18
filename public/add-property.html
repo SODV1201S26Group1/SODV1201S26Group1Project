@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -81,6 +82,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <h1>Shared Workspace App</h1>
@@ -144,6 +146,8 @@
     <script>
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
+        const token = localStorage.getItem('token');
+
         const API_BASE_URL = localStorage.getItem('apiBaseUrl')
             || (window.location.hostname.endsWith('github.io')
                 ? 'https://sodv1201s26group1project-api.onrender.com'
@@ -153,50 +157,115 @@
             return `${API_BASE_URL}${path}`;
         }
 
-        if (!email || role !== 'owner') {
+        function returnToLogin() {
+            localStorage.clear();
             window.location.replace('login.html');
         }
 
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        });
+        if (!email || role !== 'owner' || !token) {
+            returnToLogin();
+        }
 
-        document.getElementById('propertyForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-
-            const payload = {
-                email,
-                address: document.getElementById('address').value.trim(),
-                neighborhood: document.getElementById('neighborhood').value.trim(),
-                squareFootage: document.getElementById('squareFootage').value,
-                garage: document.getElementById('garage').value,
-                publicTransport: document.getElementById('publicTransport').value
-            };
-
-            const message = document.getElementById('message');
-            message.textContent = '';
-
-            if (!payload.address || !payload.neighborhood || !payload.squareFootage || !payload.garage || !payload.publicTransport) {
-                message.textContent = 'Please complete all fields.';
-                return;
-            }
-
-            const res = await fetch(apiUrl('/properties'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+        document
+            .getElementById('logoutBtn')
+            .addEventListener('click', () => {
+                localStorage.clear();
+                window.location.href = 'login.html';
             });
 
-            const data = await res.json();
-            message.textContent = data.message || (data.success ? 'Property added.' : 'Could not add property.');
+        document
+            .getElementById('propertyForm')
+            .addEventListener('submit', async event => {
+                event.preventDefault();
 
-            if (data.success) {
-                setTimeout(() => {
-                    window.location.href = 'my-properties.html';
-                }, 600);
-            }
-        });
+                const message =
+                    document.getElementById('message');
+
+                const payload = {
+                    address: document
+                        .getElementById('address')
+                        .value
+                        .trim(),
+
+                    neighborhood: document
+                        .getElementById('neighborhood')
+                        .value
+                        .trim(),
+
+                    squareFootage: document
+                        .getElementById('squareFootage')
+                        .value,
+
+                    garage: document
+                        .getElementById('garage')
+                        .value,
+
+                    publicTransport: document
+                        .getElementById('publicTransport')
+                        .value
+                };
+
+                message.textContent = '';
+
+                if (
+                    !payload.address ||
+                    !payload.neighborhood ||
+                    !payload.squareFootage ||
+                    !payload.garage ||
+                    !payload.publicTransport
+                ) {
+                    message.textContent =
+                        'Please complete all fields.';
+
+                    return;
+                }
+
+                try {
+                    const response = await fetch(
+                        apiUrl('/properties'),
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(payload)
+                        }
+                    );
+
+                    if (
+                        response.status === 401 ||
+                        response.status === 403
+                    ) {
+                        returnToLogin();
+                        return;
+                    }
+
+                    const data = await response.json();
+
+                    message.textContent =
+                        data.message ||
+                        (data.success
+                            ? 'Property added.'
+                            : 'Could not add property.');
+
+                    if (data.success) {
+                        setTimeout(() => {
+                            window.location.href =
+                                'my-properties.html';
+                        }, 600);
+                    }
+                } catch (error) {
+                    message.textContent =
+                        'Could not connect to the server.';
+
+                    console.error(
+                        'Property creation error:',
+                        error
+                    );
+                }
+            });
     </script>
 </body>
+
 </html>
