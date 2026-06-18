@@ -10,10 +10,23 @@ require('dotenv').config();
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
-const { initializeDatabase, getDatabaseStatus } = require('./db');
+const jwt = require('jsonwebtoken');
+
+const {
+    pool,
+    initializeDatabase,
+    getDatabaseStatus
+} = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    throw new Error(
+        'JWT_SECRET is missing. Add it to the .env file.'
+    );
+}
 
 // ─── In-Memory Data Store ───────────────────────────────────────────────────
 const users = [];
@@ -89,6 +102,12 @@ app.post('/register', async (req, res) => {
         role
     } = req.body;
 
+    const normalizedName =
+        String(name || '').trim();
+
+    const normalizedPhone =
+        String(phone || '').trim();
+
     const normalizedEmail =
         normalizeEmail(email);
 
@@ -97,49 +116,107 @@ app.post('/register', async (req, res) => {
             .trim()
             .toLowerCase();
 
+    if (
+        !normalizedName ||
+        !normalizedEmail ||
+        !password ||
+        !allowedRoles.has(normalizedRole)
+    ) {
+        return res.status(400).json({
+            success: false,
+            message:
+                'Name, email, password, and role are required.'
+        });
+    }
+
     if (!isValidPassword(password)) {
-        return res.json({
+        return res.status(400).json({
             success: false,
             message:
                 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
         });
     }
 
-    if (!allowedRoles.has(normalizedRole)) {
-        return res.json({
+    try {
+        const existingUser = await pool.query(
+            `
+                SELECT id
+                FROM users
+                WHERE email = $1
+            `,
+            [normalizedEmail]
+        );
+
+        if (existingUser.rows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'Email already registered'
+            });
+        }
+
+        const hashedPassword =
+            await bcrypt.hash(password, 10);
+
+        const result = await pool.query(
+            `
+                INSERT INTO users (
+                    full_name,
+                    phone,
+                    email,
+                    password_hash,
+                    role
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING
+                    id,
+                    full_name,
+                    phone,
+                    email,
+                    role,
+                    created_at
+            `,
+            [
+                normalizedName,
+                normalizedPhone,
+                normalizedEmail,
+                hashedPassword,
+                normalizedRole
+            ]
+        );
+
+        const user = result.rows[0];
+
+        return res.status(201).json({
+            success: true,
+            message: 'User registered!',
+            user: {
+                id: user.id,
+                name: user.full_name,
+                phone: user.phone,
+                email: user.email,
+                role: user.role,
+                createdAt: user.created_at
+            }
+        });
+    } catch (error) {
+        console.error(
+            'Registration failed:',
+            error
+        );
+
+        if (error.code === '23505') {
+            return res.status(409).json({
+                success: false,
+                message: 'Email already registered'
+            });
+        }
+
+        return res.status(500).json({
             success: false,
-            message: 'Invalid role selected'
+            message:
+                'The user could not be registered.'
         });
     }
-
-    const exists = users.find(
-        user =>
-            normalizeEmail(user.email) ===
-            normalizedEmail
-    );
-
-    if (exists) {
-        return res.json({
-            success: false,
-            message: 'Email already registered'
-        });
-    }
-
-    const hashedPassword =
-        await bcrypt.hash(password, 10);
-
-    users.push({
-        name,
-        phone,
-        email: normalizedEmail,
-        password: hashedPassword,
-        role: normalizedRole
-    });
-
-    res.json({
-        success: true,
-        message: 'User registered!'
-    });
 });
 
 app.post('/login', async (req, res) => {
@@ -186,74 +263,115 @@ app.post('/login', async (req, res) => {
         );
     }
 
-    const user = users.find(
-        currentUser =>
-            normalizeEmail(
-                currentUser.email
-            ) === normalizedEmail
-    );
-
-    if (!user) {
-        const nextCount =
-            (attemptRecord?.count || 0) + 1;
-
-        loginAttempts.set(
-            normalizedEmail,
-            {
-                count: nextCount,
-                lockUntil:
-                    nextCount >=
-                    MAX_LOGIN_ATTEMPTS
-                        ? now +
-                          LOGIN_LOCKOUT_MS
-                        : null
-            }
+    try {
+        const result = await pool.query(
+            `
+                SELECT
+                    id,
+                    full_name,
+                    email,
+                    password_hash,
+                    role
+                FROM users
+                WHERE email = $1
+            `,
+            [normalizedEmail]
         );
 
-        return res.status(401).json({
-            success: false,
-            message: 'Invalid credentials'
-        });
-    }
+        const user = result.rows[0];
 
-    const passwordMatches =
-        await bcrypt.compare(
-            password,
-            user.password
-        );
+        if (!user) {
+            const nextCount =
+                (attemptRecord?.count || 0) + 1;
 
-    if (passwordMatches) {
+            loginAttempts.set(
+                normalizedEmail,
+                {
+                    count: nextCount,
+                    lockUntil:
+                        nextCount >=
+                        MAX_LOGIN_ATTEMPTS
+                            ? now +
+                              LOGIN_LOCKOUT_MS
+                            : null
+                }
+            );
+
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
+
+        const passwordMatches =
+            await bcrypt.compare(
+                password,
+                user.password_hash
+            );
+
+        if (!passwordMatches) {
+            const nextCount =
+                (attemptRecord?.count || 0) + 1;
+
+            loginAttempts.set(
+                normalizedEmail,
+                {
+                    count: nextCount,
+                    lockUntil:
+                        nextCount >=
+                        MAX_LOGIN_ATTEMPTS
+                            ? now +
+                              LOGIN_LOCKOUT_MS
+                            : null
+                }
+            );
+
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
+
         loginAttempts.delete(
             normalizedEmail
         );
 
+        const token = jwt.sign(
+            {
+                userId: user.id,
+                email: user.email,
+                role: user.role
+            },
+            JWT_SECRET,
+            {
+                expiresIn: '2h'
+            }
+        );
+
         return res.json({
             success: true,
+            message: 'Login successful',
+            token,
+            user: {
+                id: user.id,
+                name: user.full_name,
+                email: user.email,
+                role: user.role
+            },
             role: user.role,
-            name: user.name
+            name: user.full_name
+        });
+    } catch (error) {
+        console.error(
+            'Login failed:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: 'Login failed.'
         });
     }
-
-    const nextCount =
-        (attemptRecord?.count || 0) + 1;
-
-    loginAttempts.set(
-        normalizedEmail,
-        {
-            count: nextCount,
-            lockUntil:
-                nextCount >=
-                MAX_LOGIN_ATTEMPTS
-                    ? now +
-                      LOGIN_LOCKOUT_MS
-                    : null
-        }
-    );
-
-    return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-    });
 });
 
 // ─── Property Routes ───────────────────────────────────────────────────────
