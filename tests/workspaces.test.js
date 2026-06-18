@@ -62,7 +62,8 @@ if (!process.env.DATABASE_URL) {
     }
 
     async function registerAndLoginOwner(tag) {
-        const email = `owner.${tag}@example.com`;
+        const uniqueSuffix = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        const email = `owner.${tag}.${uniqueSuffix}@example.com`;
 
         const registerResponse = await requestJson('/register', {
             method: 'POST',
@@ -207,7 +208,7 @@ if (!process.env.DATABASE_URL) {
         assert.equal(response.status, 401);
         assert.deepEqual(response.body, {
             success: false,
-            message: 'No token provided.'
+            message: 'Authentication token is required.'
         });
     });
 
@@ -269,7 +270,7 @@ if (!process.env.DATABASE_URL) {
         assert.equal(response.status, 401);
         assert.deepEqual(response.body, {
             success: false,
-            message: 'No token provided.'
+            message: 'Authentication token is required.'
         });
     });
 
