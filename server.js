@@ -743,94 +743,13 @@ app.delete(
 );
 
 // ─── Workspace Routes ──────────────────────────────────────────────────────
-app.post('/workspaces', (req, res) => {
-    const {
-        email,
-        propertyIndex,
-        type,
-        capacity,
-        smoking,
-        availability,
-        leaseTerm,
-        price
-    } = req.body;
-
-    const normalizedEmail =
-        normalizeEmail(email);
-
-    const parsedPropertyIndex =
-        Number(propertyIndex);
-
-    if (
-        !Number.isInteger(
-            parsedPropertyIndex
-        ) ||
-        parsedPropertyIndex < 0 ||
-        parsedPropertyIndex >=
-            properties.length
-    ) {
-        return res.json({
-            success: false,
-            message: 'Property not found'
-        });
-    }
-
-    const property =
-        properties[
-            parsedPropertyIndex
-        ];
-
-    if (
-        !property ||
-        normalizeEmail(
-            property.email
-        ) !== normalizedEmail
-    ) {
-        return res.json({
-            success: false,
-            message:
-                'Property not found for this owner.'
-        });
-    }
-
-    if (
-        type &&
-        capacity &&
-        smoking &&
-        availability &&
-        leaseTerm &&
-        price
-    ) {
-        property.workspaces.push({
-            type,
-            capacity,
-            smoking,
-            availability,
-            leaseTerm,
-            price,
-            ownerEmail:
-                normalizedEmail
-        });
-
-        return res.json({
-            success: true,
-            message:
-                'Workspace added!'
-        });
-    }
-
-    return res.json({
-        success: false,
-        message:
-            'Please fill in all required workspace fields.'
-    });
-});
-
-app.put(
-    '/workspaces/:propertyIndex/:workspaceIndex',
-    (req, res) => {
+app.post(
+    '/workspaces',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
         const {
-            email,
+            propertyIndex,
             type,
             capacity,
             smoking,
@@ -839,239 +758,357 @@ app.put(
             price
         } = req.body;
 
-        const normalizedEmail =
-            normalizeEmail(email);
+        const parsedPropertyId = Number(propertyIndex);
+        const normalizedType = String(type || '').trim();
+        const parsedCapacity = Number(capacity);
+        const parsedSmoking = parseBooleanChoice(smoking);
+        const normalizedAvailability = String(availability || '').trim();
+        const normalizedLeaseTerm = String(leaseTerm || '').trim();
+        const parsedPrice = Number(price);
 
-        const propertyIndex =
-            Number(
-                req.params.propertyIndex
-            );
-
-        const workspaceIndex =
-            Number(
-                req.params.workspaceIndex
-            );
-
-        if (
-            !Number.isInteger(
-                propertyIndex
-            ) ||
-            !Number.isInteger(
-                workspaceIndex
-            ) ||
-            propertyIndex < 0 ||
-            workspaceIndex < 0
-        ) {
-            return res.json({
+        if (!Number.isInteger(parsedPropertyId) || parsedPropertyId < 1) {
+            return res.status(400).json({
                 success: false,
-                message:
-                    'Invalid workspace selection.'
+                message: 'Property not found'
             });
         }
-
-        const property =
-            properties[propertyIndex];
-
-        if (
-            !property ||
-            normalizeEmail(
-                property.email
-            ) !== normalizedEmail
-        ) {
-            return res.json({
-                success: false,
-                message:
-                    'Property not found for this owner.'
-            });
-        }
-
-        const normalizedType =
-            String(type || '').trim();
-
-        const normalizedSmoking =
-            String(smoking || '').trim();
-
-        const normalizedAvailability =
-            String(
-                availability || ''
-            ).trim();
-
-        const normalizedLeaseTerm =
-            String(
-                leaseTerm || ''
-            ).trim();
-
-        const parsedCapacity =
-            Number(capacity);
-
-        const parsedPrice =
-            Number(price);
 
         if (
             !normalizedType ||
-            !Number.isFinite(
-                parsedCapacity
-            ) ||
+            !Number.isInteger(parsedCapacity) ||
             parsedCapacity < 1 ||
-            !normalizedSmoking ||
+            parsedSmoking === null ||
             !normalizedAvailability ||
             !normalizedLeaseTerm ||
-            !Number.isFinite(
-                parsedPrice
-            ) ||
+            !Number.isFinite(parsedPrice) ||
+            parsedPrice <= 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please fill in all required workspace fields.'
+            });
+        }
+
+        try {
+            const propertyResult = await pool.query(
+                `
+                    SELECT id
+                    FROM properties
+                    WHERE id = $1 AND owner_id = $2
+                `,
+                [parsedPropertyId, req.user.userId]
+            );
+
+            if (propertyResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Property not found for this owner.'
+                });
+            }
+
+            const workspaceResult = await pool.query(
+                `
+                    INSERT INTO workspaces (
+                        property_id,
+                        owner_id,
+                        type,
+                        capacity,
+                        smoking,
+                        availability,
+                        rental_term,
+                        price
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING *
+                `,
+                [
+                    parsedPropertyId,
+                    req.user.userId,
+                    normalizedType,
+                    parsedCapacity,
+                    parsedSmoking,
+                    normalizedAvailability,
+                    normalizedLeaseTerm,
+                    parsedPrice
+                ]
+            );
+
+            const workspace = workspaceResult.rows[0];
+
+            return res.json({
+                success: true,
+                message: 'Workspace added!',
+                workspace: {
+                    id: workspace.id,
+                    propertyIndex: workspace.property_id,
+                    workspaceIndex: workspace.id,
+                    type: workspace.type,
+                    capacity: workspace.capacity,
+                    smoking: workspace.smoking ? 'Yes' : 'No',
+                    availability: workspace.availability,
+                    leaseTerm: workspace.rental_term,
+                    price: Number(workspace.price)
+                }
+            });
+        } catch (error) {
+            console.error('Workspace creation failed:', error);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Workspace could not be added.'
+            });
+        }
+    }
+);
+
+app.put(
+    '/workspaces/:propertyIndex/:workspaceIndex',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const {
+            type,
+            capacity,
+            smoking,
+            availability,
+            leaseTerm,
+            price
+        } = req.body;
+
+        const propertyIndex = Number(req.params.propertyIndex);
+        const workspaceIndex = Number(req.params.workspaceIndex);
+
+        if (
+            !Number.isInteger(propertyIndex) ||
+            !Number.isInteger(workspaceIndex) ||
+            propertyIndex < 1 ||
+            workspaceIndex < 1
+        ) {
+            return res.json({
+                success: false,
+                message: 'Invalid workspace selection.'
+            });
+        }
+
+        const normalizedType = String(type || '').trim();
+        const parsedCapacity = Number(capacity);
+        const parsedSmoking = parseBooleanChoice(smoking);
+        const normalizedAvailability = String(availability || '').trim();
+        const normalizedLeaseTerm = String(leaseTerm || '').trim();
+        const parsedPrice = Number(price);
+
+        if (
+            !normalizedType ||
+            !Number.isInteger(parsedCapacity) ||
+            parsedCapacity < 1 ||
+            parsedSmoking === null ||
+            !normalizedAvailability ||
+            !normalizedLeaseTerm ||
+            !Number.isFinite(parsedPrice) ||
             parsedPrice <= 0
         ) {
             return res.json({
                 success: false,
-                message:
-                    'All workspace fields are required.'
+                message: 'All workspace fields are required.'
             });
         }
 
-        if (
-            !property.workspaces ||
-            workspaceIndex >=
-                property.workspaces.length
-        ) {
+        try {
+            const propertyResult = await pool.query(
+                `
+                    SELECT id
+                    FROM properties
+                    WHERE id = $1 AND owner_id = $2
+                `,
+                [propertyIndex, req.user.userId]
+            );
+
+            if (propertyResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Property not found for this owner.'
+                });
+            }
+
+            const workspaceResult = await pool.query(
+                `
+                    UPDATE workspaces
+                    SET
+                        type = $1,
+                        capacity = $2,
+                        smoking = $3,
+                        availability = $4,
+                        rental_term = $5,
+                        price = $6
+                    WHERE
+                        id = $7
+                        AND property_id = $8
+                        AND owner_id = $9
+                    RETURNING id
+                `,
+                [
+                    normalizedType,
+                    parsedCapacity,
+                    parsedSmoking,
+                    normalizedAvailability,
+                    normalizedLeaseTerm,
+                    parsedPrice,
+                    workspaceIndex,
+                    propertyIndex,
+                    req.user.userId
+                ]
+            );
+
+            if (workspaceResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Workspace not found.'
+                });
+            }
+
             return res.json({
+                success: true,
+                message: 'Workspace updated!'
+            });
+        } catch (error) {
+            console.error('Workspace update failed:', error);
+
+            return res.status(500).json({
                 success: false,
-                message:
-                    'Workspace not found.'
+                message: 'Workspace could not be updated.'
             });
         }
-
-        property.workspaces[
-            workspaceIndex
-        ] = {
-            ...property.workspaces[
-                workspaceIndex
-            ],
-            type: normalizedType,
-            capacity: parsedCapacity,
-            smoking:
-                normalizedSmoking,
-            availability:
-                normalizedAvailability,
-            leaseTerm:
-                normalizedLeaseTerm,
-            price: parsedPrice,
-            ownerEmail:
-                normalizedEmail
-        };
-
-        res.json({
-            success: true,
-            message:
-                'Workspace updated!'
-        });
     }
 );
 
 app.delete(
     '/workspaces/:propertyIndex/:workspaceIndex',
-    (req, res) => {
-        const email =
-            normalizeEmail(req.body.email);
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const propertyIndex = Number(req.params.propertyIndex);
+        const workspaceIndex = Number(req.params.workspaceIndex);
 
-        const propertyIndex =
-            Number(
-                req.params.propertyIndex
+        if (
+            !Number.isInteger(propertyIndex) ||
+            !Number.isInteger(workspaceIndex) ||
+            propertyIndex < 1 ||
+            workspaceIndex < 1
+        ) {
+            return res.json({
+                success: false,
+                message: 'Invalid workspace selection.'
+            });
+        }
+
+        try {
+            const propertyResult = await pool.query(
+                `
+                    SELECT id
+                    FROM properties
+                    WHERE id = $1 AND owner_id = $2
+                `,
+                [propertyIndex, req.user.userId]
             );
 
-        const workspaceIndex =
-            Number(
-                req.params.workspaceIndex
+            if (propertyResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Property not found for this owner.'
+                });
+            }
+
+            const deleteResult = await pool.query(
+                `
+                    DELETE FROM workspaces
+                    WHERE
+                        id = $1
+                        AND property_id = $2
+                        AND owner_id = $3
+                    RETURNING id
+                `,
+                [workspaceIndex, propertyIndex, req.user.userId]
             );
 
-        if (
-            !Number.isInteger(
-                propertyIndex
-            ) ||
-            !Number.isInteger(
-                workspaceIndex
-            ) ||
-            propertyIndex < 0 ||
-            workspaceIndex < 0
-        ) {
+            if (deleteResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Workspace not found.'
+                });
+            }
+
             return res.json({
+                success: true,
+                message: 'Workspace deleted!'
+            });
+        } catch (error) {
+            console.error('Workspace deletion failed:', error);
+
+            return res.status(500).json({
                 success: false,
-                message:
-                    'Invalid workspace selection.'
+                message: 'Workspace could not be deleted.'
             });
         }
-
-        const property =
-            properties[propertyIndex];
-
-        if (
-            !property ||
-            normalizeEmail(
-                property.email
-            ) !== email
-        ) {
-            return res.json({
-                success: false,
-                message:
-                    'Property not found for this owner.'
-            });
-        }
-
-        if (
-            !property.workspaces ||
-            workspaceIndex >=
-                property.workspaces.length
-        ) {
-            return res.json({
-                success: false,
-                message:
-                    'Workspace not found.'
-            });
-        }
-
-        property.workspaces.splice(
-            workspaceIndex,
-            1
-        );
-
-        res.json({
-            success: true,
-            message:
-                'Workspace deleted!'
-        });
     }
 );
 
-app.get('/workspaces', (req, res) => {
-    const allWorkspaces = [];
-
-    properties.forEach(
-        (property, propertyIndex) => {
-            property.workspaces.forEach(
-                (
-                    workspace,
-                    workspaceIndex
-                ) => {
-                    allWorkspaces.push({
-                        ...workspace,
-                        propertyIndex,
-                        workspaceIndex,
-                        address:
-                            property.address,
-                        neighborhood:
-                            property.neighborhood,
-                        ownerEmail:
-                            property.email
-                    });
-                }
+app.get(
+    '/workspaces',
+    authenticateToken,
+    async (req, res) => {
+        try {
+            const result = await pool.query(
+                `
+                    SELECT
+                        w.id,
+                        w.property_id,
+                        w.type,
+                        w.capacity,
+                        w.smoking,
+                        w.availability,
+                        w.rental_term,
+                        w.price,
+                        p.address,
+                        p.neighborhood,
+                        u.email AS owner_email
+                    FROM workspaces w
+                    INNER JOIN properties p
+                        ON p.id = w.property_id
+                    INNER JOIN users u
+                        ON u.id = w.owner_id
+                    ORDER BY w.id
+                `
             );
-        }
-    );
 
-    res.json({
-        success: true,
-        workspaces: allWorkspaces
-    });
-});
+            const allWorkspaces = result.rows.map(workspace => ({
+                id: workspace.id,
+                propertyIndex: workspace.property_id,
+                workspaceIndex: workspace.id,
+                type: workspace.type,
+                capacity: workspace.capacity,
+                smoking: workspace.smoking ? 'Yes' : 'No',
+                availability: workspace.availability,
+                leaseTerm: workspace.rental_term,
+                price: Number(workspace.price),
+                address: workspace.address,
+                neighborhood: workspace.neighborhood,
+                ownerEmail: workspace.owner_email
+            }));
+
+            return res.json({
+                success: true,
+                workspaces: allWorkspaces
+            });
+        } catch (error) {
+            console.error('Workspace loading failed:', error);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Workspaces could not be loaded.'
+            });
+        }
+    }
+);
 
 // ─── Contact Message Routes ────────────────────────────────────────────────
 app.post('/messages', async (req, res) => {
