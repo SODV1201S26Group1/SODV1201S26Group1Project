@@ -1,0 +1,482 @@
+{
+  "info": {
+    "_postman_id": "9cc8848c-6896-4313-82e3-f1e216581125",
+    "name": "Shared Workspace Phase 2",
+    "description": "Phase 2 API tests for the Shared Workspace App. Login automatically stores the owner JWT token. Add Property automatically stores the created property ID.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "55993159",
+    "_collection_link": "https://go.postman.co/collection/55993159-9cc8848c-6896-4313-82e3-f1e216581125?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Register Owner",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Phase Two Owner\",\n  \"phone\": \"4035550101\",\n  \"email\": \"owner.phase2@example.com\",\n  \"password\": \"Owner@1234\",\n  \"role\": \"owner\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login Owner",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const responseData = pm.response.json();",
+              "",
+              "if (responseData.token) {",
+              "    pm.collectionVariables.set('ownerToken', responseData.token);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"owner.phase2@example.com\",\n  \"password\": \"Owner@1234\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Property",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const responseData = pm.response.json();",
+              "",
+              "if (responseData.property && responseData.property.id) {",
+              "    pm.collectionVariables.set('propertyId', String(responseData.property.id));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"address\": \"101 Phase Two Street\",\n  \"neighborhood\": \"Downtown\",\n  \"squareFootage\": 2500,\n  \"garage\": \"Yes\",\n  \"publicTransport\": \"Yes\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/properties",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "properties"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "View Properties",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/properties",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "properties"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Edit Property",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"address\": \"101 Updated Phase Two Street\",\n  \"neighborhood\": \"Beltline\",\n  \"squareFootage\": 3000,\n  \"garage\": \"No\",\n  \"publicTransport\": \"Yes\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/properties/{{propertyId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "properties",
+            "{{propertyId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Workspace",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const responseData = pm.response.json();",
+              "",
+              "if (responseData.workspace) {",
+              "    const workspaceId = responseData.workspace.workspaceIndex || responseData.workspace.id;",
+              "",
+              "    if (workspaceId) {",
+              "        pm.collectionVariables.set('workspaceId', String(workspaceId));",
+              "    }",
+              "",
+              "    if (responseData.workspace.type) {",
+              "        pm.collectionVariables.set('workspaceType', responseData.workspace.type);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"propertyIndex\": {{propertyId}},\n  \"type\": \"Private Office\",\n  \"capacity\": 4,\n  \"smoking\": \"No\",\n  \"availability\": \"Available\",\n  \"leaseTerm\": \"Month\",\n  \"price\": 1200\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/workspaces",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "workspaces"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "View Workspaces",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/workspaces",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "workspaces"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Workspace Details",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const responseData = pm.response.json();",
+              "const allWorkspaces = Array.isArray(responseData.workspaces) ? responseData.workspaces : [];",
+              "const currentWorkspaceId = Number(pm.collectionVariables.get('workspaceId'));",
+              "const currentPropertyId = Number(pm.collectionVariables.get('propertyId'));",
+              "",
+              "let selectedWorkspace = allWorkspaces.find(workspace => Number(workspace.workspaceIndex) === currentWorkspaceId && Number(workspace.propertyIndex) === currentPropertyId);",
+              "",
+              "if (!selectedWorkspace) {",
+              "    selectedWorkspace = allWorkspaces.find(workspace => Number(workspace.workspaceIndex) === currentWorkspaceId);",
+              "}",
+              "",
+              "if (!selectedWorkspace && allWorkspaces.length > 0) {",
+              "    selectedWorkspace = allWorkspaces[0];",
+              "}",
+              "",
+              "if (selectedWorkspace) {",
+              "    pm.collectionVariables.set('workspaceId', String(selectedWorkspace.workspaceIndex || selectedWorkspace.id));",
+              "    pm.collectionVariables.set('propertyId', String(selectedWorkspace.propertyIndex));",
+              "",
+              "    if (selectedWorkspace.ownerEmail) {",
+              "        pm.collectionVariables.set('workspaceOwnerEmail', selectedWorkspace.ownerEmail);",
+              "    }",
+              "",
+              "    if (selectedWorkspace.type) {",
+              "        pm.collectionVariables.set('workspaceType', selectedWorkspace.type);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/workspaces",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "workspaces"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Edit Workspace",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"Private Office\",\n  \"capacity\": 6,\n  \"smoking\": \"No\",\n  \"availability\": \"Available\",\n  \"leaseTerm\": \"Month\",\n  \"price\": 1400\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/workspaces/{{propertyId}}/{{workspaceId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "workspaces",
+            "{{propertyId}}",
+            "{{workspaceId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Contact Owner",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fromEmail\": \"seeker.phase2@example.com\",\n  \"toEmail\": \"{{workspaceOwnerEmail}}\",\n  \"senderName\": \"Phase Two Seeker\",\n  \"senderEmail\": \"seeker.phase2@example.com\",\n  \"message\": \"Hi, I am interested in this workspace. Please share next steps.\",\n  \"propertyIndex\": {{propertyId}},\n  \"workspaceIndex\": {{workspaceId}},\n  \"workspaceType\": \"{{workspaceType}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/messages",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "messages"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Workspace",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/workspaces/{{propertyId}}/{{workspaceId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "workspaces",
+            "{{propertyId}}",
+            "{{workspaceId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Property",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/properties/{{propertyId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "properties",
+            "{{propertyId}}"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{ownerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "ownerToken",
+      "value": ""
+    },
+    {
+      "key": "propertyId",
+      "value": ""
+    },
+    {
+      "key": "workspaceId",
+      "value": ""
+    },
+    {
+      "key": "workspaceOwnerEmail",
+      "value": "owner.phase2@example.com"
+    },
+    {
+      "key": "workspaceType",
+      "value": "Private Office"
+    }
+  ]
+}
