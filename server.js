@@ -18,6 +18,11 @@ const {
     getDatabaseStatus
 } = require('./db');
 
+const {
+    authenticateToken,
+    requireOwner
+} = require('./middleware/auth');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -35,6 +40,24 @@ const contactMessages = [];
 
 const normalizeEmail = value =>
     String(value || '').trim().toLowerCase();
+
+function parseBooleanChoice(value) {
+    if (
+        value === true ||
+        String(value).toLowerCase() === 'yes'
+    ) {
+        return true;
+    }
+
+    if (
+        value === false ||
+        String(value).toLowerCase() === 'no'
+    ) {
+        return false;
+    }
+
+    return null;
+}
 
 const allowedRoles = new Set([
     'owner',
@@ -375,134 +398,345 @@ app.post('/login', async (req, res) => {
 });
 
 // ─── Property Routes ───────────────────────────────────────────────────────
-app.post('/properties', (req, res) => {
-    const {
-        email,
-        address,
-        neighborhood,
-        squareFootage,
-        garage,
-        publicTransport
-    } = req.body;
+app.post(
+    '/properties',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const {
+            address,
+            neighborhood,
+            squareFootage,
+            garage,
+            publicTransport
+        } = req.body;
 
-    const normalizedEmail =
-        normalizeEmail(email);
+        const normalizedAddress =
+            String(address || '').trim();
 
-    const normalizedAddress =
-        String(address || '').trim();
+        const normalizedNeighborhood =
+            String(neighborhood || '').trim();
 
-    const normalizedNeighborhood =
-        String(neighborhood || '').trim();
+        const parsedSquareFootage =
+            Number(squareFootage);
 
-    const parsedSquareFootage =
-        Number(squareFootage);
+        const parsedGarage =
+            parseBooleanChoice(garage);
 
-    if (
-        !normalizedEmail ||
-        !normalizedAddress ||
-        !normalizedNeighborhood ||
-        !Number.isInteger(
-            parsedSquareFootage
-        ) ||
-        parsedSquareFootage < 1 ||
-        !garage ||
-        !publicTransport
-    ) {
-        return res.json({
-            success: false,
-            message:
-                'All property fields are required.'
-        });
-    }
+        const parsedPublicTransport =
+            parseBooleanChoice(publicTransport);
 
-    properties.push({
-        propertyId: nextPropertyId++,
-        ownerId: normalizedEmail,
-        email: normalizedEmail,
-        address: normalizedAddress,
-        neighborhood:
-            normalizedNeighborhood,
-        squareFootage:
-            parsedSquareFootage,
-        garage,
-        publicTransport,
-        workspaces: []
-    });
-
-    res.json({
-        success: true,
-        message: 'Property added!'
-    });
-});
-
-app.get('/properties', (req, res) => {
-    const email =
-        normalizeEmail(req.query.email);
-
-    const userProperties = properties
-        .map(
-            (
-                property,
-                propertyIndex
-            ) => ({
-                ...property,
-                propertyIndex
-            })
-        )
-        .filter(
-            property =>
-                normalizeEmail(
-                    property.email
-                ) === email
-        );
-
-    res.json({
-        success: true,
-        properties: userProperties
-    });
-});
-
-app.delete(
-    '/properties/:index',
-    (req, res) => {
-        const email =
-            normalizeEmail(req.body.email);
-
-        const index =
-            parseInt(
-                req.params.index,
-                10
-            );
-
-        if (!Number.isInteger(index)) {
+        if (
+            !normalizedAddress ||
+            !normalizedNeighborhood ||
+            !Number.isInteger(parsedSquareFootage) ||
+            parsedSquareFootage < 1 ||
+            parsedGarage === null ||
+            parsedPublicTransport === null
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
-                    'Invalid property index.'
+                    'All valid property fields are required.'
             });
         }
 
-        const property =
-            properties[index];
+        try {
+            const result = await pool.query(
+                `
+                    INSERT INTO properties (
+                        owner_id,
+                        address,
+                        neighborhood,
+                        square_footage,
+                        garage,
+                        public_transport
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING *
+                `,
+                [
+                    req.user.userId,
+                    normalizedAddress,
+                    normalizedNeighborhood,
+                    parsedSquareFootage,
+                    parsedGarage,
+                    parsedPublicTransport
+                ]
+            );
 
-        if (
-            index >= 0 &&
-            property &&
-            normalizeEmail(
-                property.email
-            ) === email
-        ) {
-            properties.splice(index, 1);
+            const property = result.rows[0];
+
+            return res.status(201).json({
+                success: true,
+                message: 'Property added!',
+                property: {
+                    id: property.id,
+                    propertyId: property.id,
+                    propertyIndex: property.id,
+                    address: property.address,
+                    neighborhood: property.neighborhood,
+                    squareFootage:
+                        property.square_footage,
+                    garage:
+                        property.garage
+                            ? 'Yes'
+                            : 'No',
+                    publicTransport:
+                        property.public_transport
+                            ? 'Yes'
+                            : 'No'
+                }
+            });
+        } catch (error) {
+            console.error(
+                'Property creation failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'The property could not be added.'
+            });
+        }
+    }
+);
+
+app.get(
+    '/properties',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        try {
+            const result = await pool.query(
+                `
+                    SELECT
+                        p.*,
+                        COUNT(w.id)::INTEGER
+                            AS workspace_count
+                    FROM properties p
+                    LEFT JOIN workspaces w
+                        ON w.property_id = p.id
+                    WHERE p.owner_id = $1
+                    GROUP BY p.id
+                    ORDER BY p.id
+                `,
+                [req.user.userId]
+            );
+
+            const userProperties =
+                result.rows.map(property => ({
+                    id: property.id,
+                    propertyId: property.id,
+                    propertyIndex: property.id,
+                    ownerId: property.owner_id,
+                    address: property.address,
+                    neighborhood:
+                        property.neighborhood,
+                    squareFootage:
+                        property.square_footage,
+                    garage:
+                        property.garage
+                            ? 'Yes'
+                            : 'No',
+                    publicTransport:
+                        property.public_transport
+                            ? 'Yes'
+                            : 'No',
+                    workspaceCount:
+                        property.workspace_count,
+                    workspaces: Array(
+                        property.workspace_count
+                    ).fill(null)
+                }));
 
             return res.json({
-                success: true
+                success: true,
+                properties: userProperties
+            });
+        } catch (error) {
+            console.error(
+                'Property loading failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'Properties could not be loaded.'
+            });
+        }
+    }
+);
+
+app.put(
+    '/properties/:id',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const propertyId =
+            Number(req.params.id);
+
+        const {
+            address,
+            neighborhood,
+            squareFootage,
+            garage,
+            publicTransport
+        } = req.body;
+
+        const normalizedAddress =
+            String(address || '').trim();
+
+        const normalizedNeighborhood =
+            String(neighborhood || '').trim();
+
+        const parsedSquareFootage =
+            Number(squareFootage);
+
+        const parsedGarage =
+            parseBooleanChoice(garage);
+
+        const parsedPublicTransport =
+            parseBooleanChoice(publicTransport);
+
+        if (
+            !Number.isInteger(propertyId) ||
+            propertyId < 1
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid property ID.'
             });
         }
 
-        return res.json({
-            success: false,
-            message: 'Property not found'
-        });
+        if (
+            !normalizedAddress ||
+            !normalizedNeighborhood ||
+            !Number.isInteger(parsedSquareFootage) ||
+            parsedSquareFootage < 1 ||
+            parsedGarage === null ||
+            parsedPublicTransport === null
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'All valid property fields are required.'
+            });
+        }
+
+        try {
+            const result = await pool.query(
+                `
+                    UPDATE properties
+                    SET
+                        address = $1,
+                        neighborhood = $2,
+                        square_footage = $3,
+                        garage = $4,
+                        public_transport = $5
+                    WHERE
+                        id = $6
+                        AND owner_id = $7
+                    RETURNING *
+                `,
+                [
+                    normalizedAddress,
+                    normalizedNeighborhood,
+                    parsedSquareFootage,
+                    parsedGarage,
+                    parsedPublicTransport,
+                    propertyId,
+                    req.user.userId
+                ]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        'Property not found for this owner.'
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'Property updated!',
+                property: result.rows[0]
+            });
+        } catch (error) {
+            console.error(
+                'Property update failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'The property could not be updated.'
+            });
+        }
+    }
+);
+
+app.delete(
+    '/properties/:id',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const propertyId =
+            Number(req.params.id);
+
+        if (
+            !Number.isInteger(propertyId) ||
+            propertyId < 1
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid property ID.'
+            });
+        }
+
+        try {
+            const result = await pool.query(
+                `
+                    DELETE FROM properties
+                    WHERE
+                        id = $1
+                        AND owner_id = $2
+                    RETURNING id
+                `,
+                [
+                    propertyId,
+                    req.user.userId
+                ]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        'Property not found for this owner.'
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'Property deleted!'
+            });
+        } catch (error) {
+            console.error(
+                'Property deletion failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'The property could not be deleted.'
+            });
+        }
     }
 );
 
