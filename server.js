@@ -77,15 +77,18 @@ const isValidPassword = value =>
     passwordPattern.test(String(value || ''));
 
 // ─── Test Helper ────────────────────────────────────────────────────────────
-function resetState() {
+async function resetState() {
     users.length = 0;
     properties.length = 0;
     loginAttempts.clear();
     nextPropertyId = 1;
 
-    pool.query('DELETE FROM contact_messages_v2').catch(() => {
+    // Keep DB-backed message tests deterministic between runs.
+    try {
+        await pool.query('DELETE FROM contact_messages_v2');
+    } catch {
         // Keep resetState non-throwing for existing test flows.
-    });
+    }
 }
 
 // ─── Middleware ─────────────────────────────────────────────────────────────

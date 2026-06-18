@@ -82,8 +82,8 @@ if (!process.env.DATABASE_URL) {
         });
     });
 
-    test.beforeEach(() => {
-        resetState();
+    test.beforeEach(async () => {
+        await resetState();
     });
 
     test('message endpoint rejects missing fields', async () => {

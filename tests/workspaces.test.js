@@ -158,8 +158,8 @@ if (!process.env.DATABASE_URL) {
         });
     });
 
-    test.beforeEach(() => {
-        resetState();
+    test.beforeEach(async () => {
+        await resetState();
     });
 
     test('workspace create persists a new workspace for owner property', async () => {
