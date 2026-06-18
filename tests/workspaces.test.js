@@ -12,7 +12,7 @@ let baseUrl;
 if (!process.env.DATABASE_URL) {
     test('workspace tests require DATABASE_URL', { skip: true }, () => {});
 } else {
-    const { initializeDatabase } = require('../db');
+    const { initializeDatabase, pool } = require('../db');
     ({ app, resetState } = require('../server'));
 
     function requestJson(pathname, { method = 'GET', body, token } = {}) {
@@ -189,6 +189,24 @@ if (!process.env.DATABASE_URL) {
         assert.equal(response.body.workspace.availability, 'Available');
         assert.equal(response.body.workspace.leaseTerm, 'Month');
         assert.equal(response.body.workspace.price, 850);
+
+        const dbWorkspaceResult = await pool.query(
+            `
+                SELECT property_id, owner_id, type, capacity, smoking, availability, rental_term, price
+                FROM workspaces
+                WHERE id = $1
+            `,
+            [response.body.workspace.workspaceIndex]
+        );
+
+        assert.equal(dbWorkspaceResult.rows.length, 1);
+        assert.equal(dbWorkspaceResult.rows[0].property_id, propertyIndex);
+        assert.equal(dbWorkspaceResult.rows[0].type, 'Private Office');
+        assert.equal(dbWorkspaceResult.rows[0].capacity, 4);
+        assert.equal(dbWorkspaceResult.rows[0].smoking, false);
+        assert.equal(dbWorkspaceResult.rows[0].availability, 'Available');
+        assert.equal(dbWorkspaceResult.rows[0].rental_term, 'Month');
+        assert.equal(Number(dbWorkspaceResult.rows[0].price), 850);
     });
 
     test('workspace create rejects unauthenticated request', async () => {
