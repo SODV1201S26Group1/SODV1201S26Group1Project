@@ -239,16 +239,8 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
-
         function togglePasswordVisibility(inputId, buttonId) {
             const input = document.getElementById(inputId);
             const button = document.getElementById(buttonId);
@@ -266,29 +258,44 @@
             const role = document.getElementById('role').value;
             const message = document.getElementById('message');
 
+            if (!name || !phone || !email || !password || !role) {
+                message.className = 'error-message';
+                message.textContent = 'All fields are required.';
+                return;
+            }
+
             if (password !== confirmPassword) {
                 message.className = 'error-message';
                 message.textContent = 'Passwords do not match!';
                 return;
             }
 
-            const res = await fetch(apiUrl('/register'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, email, password, role })
+            const response = await apiPost('/register', {
+                name,
+                phone,
+                email,
+                password,
+                role,
             });
-            const data = await res.json();
+
+            if (!response) {
+                message.className = 'error-message';
+                message.textContent = 'Registration failed. Please try again.';
+                return;
+            }
+
+            const { data } = response;
 
             if (data.success) {
                 message.className = 'success-message';
-                message.textContent = data.message;
+                message.textContent = data.message || 'Registration successful! Redirecting to login...';
 
                 setTimeout(() => {
                     window.location.href = 'login.html';
-                }, 800);
+                }, 1500);
             } else {
                 message.className = 'error-message';
-                message.textContent = data.message;
+                message.textContent = data.message || 'Registration failed.';
             }
         }
     </script>

@@ -141,24 +141,19 @@
         </section>
     </main>
 
+    <script src="auth.js"></script>
     <script>
-        const email = localStorage.getItem('email');
+        // Require owner authentication
+        requireAuth();
         const role = localStorage.getItem('role');
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
-
-        if (!email || role !== 'owner') {
+        if (role !== 'owner') {
             window.location.replace('login.html');
         }
 
+        const email = localStorage.getItem('email');
+
         document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.clear();
+            clearAuth();
             window.location.href = 'login.html';
         });
 
@@ -182,13 +177,14 @@
                 return;
             }
 
-            const res = await fetch(apiUrl('/properties'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const response = await apiPost('/properties', payload);
 
-            const data = await res.json();
+            if (!response) {
+                message.textContent = 'Could not add property.';
+                return;
+            }
+
+            const { data } = response;
             message.textContent = data.message || (data.success ? 'Property added.' : 'Could not add property.');
 
             if (data.success) {

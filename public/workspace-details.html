@@ -445,22 +445,11 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
+        requireAuth();
         const email = localStorage.getItem('email');
-        if (!email) {
-            window.location.href = 'login.html';
-        }
-
         const role = localStorage.getItem('role');
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
-
         const normalizedEmail = String(email || '').trim().toLowerCase();
         const params = new URLSearchParams(window.location.search);
         const propertyIndex = params.get('propertyIndex');
@@ -487,7 +476,7 @@
         }
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.clear();
+            clearAuth();
             window.location.href = 'login.html';
         });
 
@@ -539,22 +528,22 @@
             contactSendBtn.textContent = 'Sending...';
 
             try {
-                const response = await fetch(apiUrl('/messages'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        fromEmail: email,
-                        toEmail: currentWorkspace.ownerEmail,
-                        senderName,
-                        senderEmail,
-                        message: messageText,
-                        propertyIndex: currentWorkspace.propertyIndex,
-                        workspaceIndex: currentWorkspace.workspaceIndex,
-                        workspaceType: currentWorkspace.type
-                    })
+                const response = await apiPost('/messages', {
+                    fromEmail: email,
+                    toEmail: currentWorkspace.ownerEmail,
+                    senderName,
+                    senderEmail,
+                    message: messageText,
+                    propertyIndex: currentWorkspace.propertyIndex,
+                    workspaceIndex: currentWorkspace.workspaceIndex,
+                    workspaceType: currentWorkspace.type
                 });
 
-                const data = await response.json();
+                if (!response) {
+                    throw new Error('Failed to send message');
+                }
+
+                const { data } = response;
                 contactModalMessage.textContent = data.message || 'Request completed.';
                 contactModalMessage.classList.toggle('success', Boolean(data.success));
 
@@ -592,8 +581,13 @@
             }
 
             try {
-                const response = await fetch(apiUrl('/workspaces'));
-                const data = await response.json();
+                const response = await apiGet('/workspaces');
+                
+                if (!response) {
+                    throw new Error('Failed to load workspaces');
+                }
+
+                const { data } = response;
                 const workspaces = data.success ? data.workspaces : [];
 
                 const workspace = workspaces.find((item) => {
@@ -643,6 +637,7 @@
         }
 
         loadWorkspaceDetails();
+    </script>
     </script>
 </body>
 </html>
