@@ -1111,202 +1111,192 @@ app.get(
 );
 
 // ─── Contact Message Routes ────────────────────────────────────────────────
-app.post('/messages', async (req, res) => {
-    const {
-        fromEmail,
-        toEmail,
-        senderName,
-        senderEmail,
-        message,
-        propertyIndex,
-        workspaceIndex,
-        workspaceType
-    } = req.body;
+app.post(
+    '/messages',
+    authenticateToken,
+    async (req, res) => {
+        const {
+            workspaceId,
+            message
+        } = req.body;
 
-    const normalizedToEmail =
-        String(toEmail || '').trim();
+        const parsedWorkspaceId =
+            Number(workspaceId);
 
-    const normalizedSenderName =
-        String(senderName || '').trim();
-
-    const normalizedSenderEmail =
-        String(senderEmail || '').trim();
-
-    const normalizedMessage =
-        String(message || '').trim();
-
-    const parsedPropertyIndex =
-        Number(propertyIndex);
-
-    const parsedWorkspaceIndex =
-        Number(workspaceIndex);
-
-    if (
-        !normalizedToEmail ||
-        !normalizedSenderName ||
-        !normalizedSenderEmail ||
-        !normalizedMessage ||
-        !Number.isInteger(parsedPropertyIndex) ||
-        parsedPropertyIndex < 0 ||
-        !Number.isInteger(parsedWorkspaceIndex) ||
-        parsedWorkspaceIndex < 0
-    ) {
-        return res.json({
-            success: false,
-            message:
-                'All contact fields are required.'
-        });
-    }
-
-    const matchingProperty =
-        properties[parsedPropertyIndex];
-
-    if (matchingProperty) {
-        const matchingWorkspace =
-            matchingProperty.workspaces?.[
-                parsedWorkspaceIndex
-            ];
-
-        if (!matchingWorkspace) {
-            return res.json({
-                success: false,
-                message: 'Workspace not found.'
-            });
-        }
+        const normalizedMessage =
+            String(message || '').trim();
 
         if (
-            normalizeEmail(
-                matchingProperty.email
-            ) !==
-            normalizeEmail(
-                normalizedToEmail
-            )
+            !Number.isInteger(parsedWorkspaceId) ||
+            parsedWorkspaceId < 1 ||
+            !normalizedMessage
         ) {
-            return res.json({
+            return res.status(400).json({
                 success: false,
                 message:
-                    'Owner and workspace do not match.'
+                    'A valid workspace and message are required.'
+            });
+        }
+
+        try {
+            const workspaceResult = await pool.query(
+                `
+                    SELECT
+                        w.id AS workspace_id,
+                        w.owner_id,
+                        w.type,
+                        p.address,
+                        p.neighborhood,
+                        owner.email AS owner_email
+                    FROM workspaces w
+                    INNER JOIN properties p
+                        ON p.id = w.property_id
+                    INNER JOIN users owner
+                        ON owner.id = w.owner_id
+                    WHERE w.id = $1
+                `,
+                [parsedWorkspaceId]
+            );
+
+            if (workspaceResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        'Workspace not found.'
+                });
+            }
+
+            const workspace =
+                workspaceResult.rows[0];
+
+            if (
+                Number(workspace.owner_id) ===
+                Number(req.user.userId)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        'Owners cannot contact themselves about their own workspace.'
+                });
+            }
+
+            const insertResult = await pool.query(
+                `
+                    INSERT INTO contact_messages (
+                        workspace_id,
+                        sender_id,
+                        owner_id,
+                        message
+                    )
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING
+                        id,
+                        workspace_id,
+                        sender_id,
+                        owner_id,
+                        message,
+                        created_at
+                `,
+                [
+                    workspace.workspace_id,
+                    req.user.userId,
+                    workspace.owner_id,
+                    normalizedMessage
+                ]
+            );
+
+            return res.status(201).json({
+                success: true,
+                message:
+                    'Message sent to owner.',
+                contactMessage: insertResult.rows[0],
+                workspace: {
+                    id: workspace.workspace_id,
+                    type: workspace.type,
+                    address: workspace.address,
+                    neighborhood:
+                        workspace.neighborhood,
+                    ownerEmail:
+                        workspace.owner_email
+                }
+            });
+        } catch (error) {
+            console.error(
+                'Contact message creation failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'The message could not be sent.'
             });
         }
     }
+);
 
-    const normalizedWorkspaceType =
-        String(
-            workspaceType || ''
-        ).trim();
+app.get(
+    '/messages',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        try {
+            const result = await pool.query(
+                `
+                    SELECT
+                        cm.id,
+                        cm.message,
+                        cm.created_at,
+                        cm.workspace_id,
+                        sender.full_name AS sender_name,
+                        sender.email AS sender_email,
+                        w.type AS workspace_type,
+                        p.address AS property_address,
+                        p.neighborhood AS property_neighborhood
+                    FROM contact_messages cm
+                    INNER JOIN users sender
+                        ON sender.id = cm.sender_id
+                    INNER JOIN workspaces w
+                        ON w.id = cm.workspace_id
+                    INNER JOIN properties p
+                        ON p.id = w.property_id
+                    WHERE cm.owner_id = $1
+                    ORDER BY cm.created_at DESC
+                `,
+                [req.user.userId]
+            );
 
-    try {
-        await pool.query(
-            `
-                INSERT INTO contact_messages_v2 (
-                    from_email,
-                    to_email,
-                    sender_name,
-                    sender_email,
-                    message,
-                    property_index,
-                    workspace_index,
-                    workspace_type
-                )
-                VALUES (
-                    $1,
-                    $2,
-                    $3,
-                    $4,
-                    $5,
-                    $6,
-                    $7,
-                    $8
-                )
-            `,
-            [
-                normalizeEmail(fromEmail),
-                normalizeEmail(
-                    normalizedToEmail
-                ),
-                normalizedSenderName,
-                normalizeEmail(
-                    normalizedSenderEmail
-                ),
-                normalizedMessage,
-                parsedPropertyIndex,
-                parsedWorkspaceIndex,
-                normalizedWorkspaceType
-            ]
-        );
-    } catch (error) {
-        console.error(
-            'Message save failed:',
-            error
-        );
+            return res.json({
+                success: true,
+                messages: result.rows.map(row => ({
+                    id: row.id,
+                    message: row.message,
+                    createdAt: row.created_at,
+                    workspaceId: row.workspace_id,
+                    senderName: row.sender_name,
+                    senderEmail: row.sender_email,
+                    workspaceType:
+                        row.workspace_type,
+                    propertyAddress:
+                        row.property_address,
+                    propertyNeighborhood:
+                        row.property_neighborhood
+                }))
+            });
+        } catch (error) {
+            console.error(
+                'Contact messages loading failed:',
+                error
+            );
 
-        return res.status(500).json({
-            success: false,
-            message:
-                'Message could not be saved.'
-        });
+            return res.status(500).json({
+                success: false,
+                message:
+                    'Messages could not be loaded.'
+            });
+        }
     }
-
-    return res.json({
-        success: true,
-        message:
-            'Message sent to owner.'
-    });
-});
-
-app.get('/messages', async (req, res) => {
-    const ownerEmail =
-        normalizeEmail(
-            req.query.ownerEmail ||
-                req.query.toEmail
-        );
-
-    if (!ownerEmail) {
-        return res.status(400).json({
-            success: false,
-            message:
-                'ownerEmail is required.'
-        });
-    }
-
-    try {
-        const result = await pool.query(
-            `
-                SELECT
-                    id,
-                    from_email AS "fromEmail",
-                    to_email AS "toEmail",
-                    sender_name AS "senderName",
-                    sender_email AS "senderEmail",
-                    message,
-                    property_index AS "propertyIndex",
-                    workspace_index AS "workspaceIndex",
-                    workspace_type AS "workspaceType",
-                    created_at AS "createdAt"
-                FROM contact_messages_v2
-                WHERE to_email = $1
-                ORDER BY id DESC
-            `,
-            [ownerEmail]
-        );
-
-        return res.json({
-            success: true,
-            messages: result.rows
-        });
-    } catch (error) {
-        console.error(
-            'Message load failed:',
-            error
-        );
-
-        return res.status(500).json({
-            success: false,
-            message:
-                'Messages could not be loaded.'
-        });
-    }
-});
+);
 
 // ─── Server Start ──────────────────────────────────────────────────────────
 async function startServer() {

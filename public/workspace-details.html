@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -340,6 +341,7 @@
         }
 
         @media (max-width: 35rem) {
+
             nav,
             footer {
                 padding: 0.75rem 1rem;
@@ -361,6 +363,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <h1>Shared Workspace App</h1>
@@ -450,6 +453,19 @@
         requireAuth();
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
+
+        function getApiUrl(path) {
+            const isLocal =
+                window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1';
+
+            if (isLocal) {
+                return path;
+            }
+
+            return `https://sodv1201s26group1project-api.onrender.com${path}`;
+        }
+
         const normalizedEmail = String(email || '').trim().toLowerCase();
         const params = new URLSearchParams(window.location.search);
         const propertyIndex = params.get('propertyIndex');
@@ -513,12 +529,25 @@
                 return;
             }
 
-            const senderName = contactNameInput.value.trim();
-            const senderEmail = contactEmailInput.value.trim();
-            const messageText = contactMessageInput.value.trim();
+            const token = localStorage.getItem('token');
 
-            if (!senderName || !senderEmail || !messageText) {
-                contactModalMessage.textContent = 'Please complete all contact fields.';
+            if (!token) {
+                contactModalMessage.textContent =
+                    'Please log in before contacting the owner.';
+                contactModalMessage.classList.remove('success');
+                return;
+            }
+
+            const workspaceId =
+                currentWorkspace.id ??
+                currentWorkspace.workspaceId;
+
+            const messageText =
+                contactMessageInput.value.trim();
+
+            if (!workspaceId || !messageText) {
+                contactModalMessage.textContent =
+                    'Please enter a message.';
                 contactModalMessage.classList.remove('success');
                 return;
             }
@@ -528,34 +557,48 @@
             contactSendBtn.textContent = 'Sending...';
 
             try {
-                const response = await apiPost('/messages', {
-                    fromEmail: email,
-                    toEmail: currentWorkspace.ownerEmail,
-                    senderName,
-                    senderEmail,
-                    message: messageText,
-                    propertyIndex: currentWorkspace.propertyIndex,
-                    workspaceIndex: currentWorkspace.workspaceIndex,
-                    workspaceType: currentWorkspace.type
-                });
+                const response = await fetch(
+                    getApiUrl('/messages'),
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            workspaceId,
+                            message: messageText
+                        })
+                    }
+                );
 
-                if (!response) {
-                    throw new Error('Failed to send message');
-                }
+                const data = await response.json();
 
-                const { data } = response;
-                contactModalMessage.textContent = data.message || 'Request completed.';
-                contactModalMessage.classList.toggle('success', Boolean(data.success));
+                contactModalMessage.textContent =
+                    data.message || 'Request completed.';
+
+                contactModalMessage.classList.toggle(
+                    'success',
+                    Boolean(data.success)
+                );
 
                 if (data.success) {
+                    contactMessageInput.value = '';
+
                     setTimeout(() => {
                         closeContactModal();
                     }, 700);
                 }
             } catch (error) {
-                contactModalMessage.textContent = 'Message could not be sent. Please try again.';
+                contactModalMessage.textContent =
+                    'Message could not be sent. Please try again.';
+
                 contactModalMessage.classList.remove('success');
-                console.error('Error sending contact message:', error);
+
+                console.error(
+                    'Error sending contact message:',
+                    error
+                );
             } finally {
                 contactSendBtn.disabled = false;
                 contactSendBtn.textContent = originalBtnText;
@@ -582,7 +625,7 @@
 
             try {
                 const response = await apiGet('/workspaces');
-                
+
                 if (!response) {
                     throw new Error('Failed to load workspaces');
                 }
@@ -638,6 +681,6 @@
 
         loadWorkspaceDetails();
     </script>
-    </script>
 </body>
+
 </html>
