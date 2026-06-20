@@ -303,29 +303,72 @@
         // Load owner properties into dropdown
         async function loadProperties() {
             const response = await apiGet('/properties');
-            
-            if (!response) {
+
+            if (
+                !response ||
+                !response.data ||
+                !response.data.success
+            ) {
                 setMessage('Could not load properties.');
                 return;
             }
 
-            const { data } = response;
-            const select = document.getElementById('propertyIndex');
-            
-            data.properties.forEach((p, index) => {
-                const option = document.createElement('option');
+            const properties = Array.isArray(
+                response.data.properties
+            )
+                ? response.data.properties
+                : [];
 
-                option.value =
-                    p.propertyIndex !== undefined
-                        ? p.propertyIndex
-                        : index;
+            const select =
+                document.getElementById('propertyIndex');
 
-                option.textContent = p.address;
+            select.innerHTML = `
+        <option value="">
+            Choose a property
+        </option>
+    `;
+
+            if (properties.length === 0) {
+                setMessage(
+                    'No properties found. Add a property first.'
+                );
+                return;
+            }
+
+            properties.forEach(property => {
+                const propertyId =
+                    property.id ??
+                    property.propertyId ??
+                    property.propertyIndex;
+
+                if (propertyId === undefined || propertyId === null) {
+                    return;
+                }
+
+                const option =
+                    document.createElement('option');
+
+                option.value = String(propertyId);
+                option.textContent = property.address;
+
                 select.appendChild(option);
             });
 
-            if (selectedPropertyIndex !== null) {
-                select.value = selectedPropertyIndex;
+            if (
+                selectedPropertyIndex !== null &&
+                selectedPropertyIndex !== ''
+            ) {
+                const matchingOption =
+                    Array.from(select.options).some(
+                        option =>
+                            option.value ===
+                            String(selectedPropertyIndex)
+                    );
+
+                if (matchingOption) {
+                    select.value =
+                        String(selectedPropertyIndex);
+                }
             }
         }
 
@@ -343,7 +386,7 @@
 
             try {
                 const response = await apiGet('/workspaces');
-                
+
                 if (!response) {
                     throw new Error('Failed to load workspaces');
                 }
