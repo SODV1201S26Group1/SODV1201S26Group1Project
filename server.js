@@ -4,348 +4,1114 @@ GitHub Copilot was used to help draft code, explain parts of the assignment by d
 Technical background: PLC programming and robotics systems.
 */
 
-// ─── Dependencies ───────────────────────────────────────────────────────────
+// ─── Environment and Dependencies ──────────────────────────────────────────
+require('dotenv').config();
+
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
-const app = express();
+const jwt = require('jsonwebtoken');
 
-// ─── In-Memory Data Store ────────────────────────────────────────────────────
+const {
+    pool,
+    initializeDatabase,
+    getDatabaseStatus
+} = require('./db');
+
+const {
+    authenticateToken,
+    requireOwner
+} = require('./middleware/auth');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    throw new Error(
+        'JWT_SECRET is missing. Add it to the .env file.'
+    );
+}
+
+// ─── In-Memory Data Store ───────────────────────────────────────────────────
 const users = [];
 const properties = [];
-const contactMessages = [];
-const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
-const allowedRoles = new Set(['owner', 'coworker']);
-const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}$/;
+
+const normalizeEmail = value =>
+    String(value || '').trim().toLowerCase();
+
+function parseBooleanChoice(value) {
+    if (
+        value === true ||
+        String(value).toLowerCase() === 'yes'
+    ) {
+        return true;
+    }
+
+    if (
+        value === false ||
+        String(value).toLowerCase() === 'no'
+    ) {
+        return false;
+    }
+
+    return null;
+}
+
+const allowedRoles = new Set([
+    'owner',
+    'coworker'
+]);
+
+const passwordPattern =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}$/;
+
 const loginAttempts = new Map();
+
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
-// Issue #16: local incremental id for in-memory property records.
+
 let nextPropertyId = 1;
 
-const isValidPassword = (value) => passwordPattern.test(String(value || ''));
+const isValidPassword = value =>
+    passwordPattern.test(String(value || ''));
 
-// ─── Test Helper (resets state between test runs) ────────────────────────────
+// ─── Test Helper ────────────────────────────────────────────────────────────
 function resetState() {
     users.length = 0;
     properties.length = 0;
     loginAttempts.clear();
     nextPropertyId = 1;
+
+    pool.query('DELETE FROM contact_messages_v2').catch(() => {
+        // Keep resetState non-throwing for existing test flows.
+    });
 }
 
 // ─── Middleware ─────────────────────────────────────────────────────────────
-app.use(cors({
-    origin(origin, callback) {
-        if (!origin) {
-            return callback(null, true);
-        }
-
-        if (origin === 'http://localhost:3000' || origin === 'http://127.0.0.1:3000') {
-            return callback(null, true);
-        }
-
-        if (/^https:\/\/[a-z0-9-]+\.github\.io$/i.test(origin)) {
-            return callback(null, true);
-        }
-
-        return callback(new Error('Not allowed by CORS'));
-    }
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// ─── Auth Routes ─────────────────────────────────────────────────────────────
-app.post('/register', async (req, res) => {
-    const { name, phone, email, password, role } = req.body;
-    const normalizedEmail = normalizeEmail(email);
-    const normalizedRole = String(role || '').trim().toLowerCase();
+// ─── Database Health Check ─────────────────────────────────────────────────
+app.get('/health', async (req, res) => {
+    try {
+        const status = await getDatabaseStatus();
 
-    if (!isValidPassword(password)) {
-        return res.json({
+        res.json({
+            success: true,
+            message: 'Server and database are connected.',
+            databaseTime: status.databaseTime,
+            tables: status.tables
+        });
+    } catch (error) {
+        console.error(
+            'Health check failed:',
+            error
+        );
+
+        res.status(500).json({
             success: false,
-            message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
+            message: 'Database connection failed.'
+        });
+    }
+});
+
+// ─── Authentication Routes ─────────────────────────────────────────────────
+app.post('/register', async (req, res) => {
+    const {
+        name,
+        phone,
+        email,
+        password,
+        role
+    } = req.body;
+
+    const normalizedName =
+        String(name || '').trim();
+
+    const normalizedPhone =
+        String(phone || '').trim();
+
+    const normalizedEmail =
+        normalizeEmail(email);
+
+    const normalizedRole =
+        String(role || '')
+            .trim()
+            .toLowerCase();
+
+    if (
+        !normalizedName ||
+        !normalizedEmail ||
+        !password ||
+        !allowedRoles.has(normalizedRole)
+    ) {
+        return res.status(400).json({
+            success: false,
+            message:
+                'Name, email, password, and role are required.'
         });
     }
 
-    if (!allowedRoles.has(normalizedRole)) {
-        return res.json({ success: false, message: 'Invalid role selected' });
+    if (!isValidPassword(password)) {
+        return res.status(400).json({
+            success: false,
+            message:
+                'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
+        });
     }
 
-    const exists = users.find(u => normalizeEmail(u.email) === normalizedEmail);
-    if (exists) {
-        return res.json({ success: false, message: 'Email already registered' });
-    }
+    try {
+        const existingUser = await pool.query(
+            `
+                SELECT id
+                FROM users
+                WHERE email = $1
+            `,
+            [normalizedEmail]
+        );
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    users.push({ name, phone, email: normalizedEmail, password: hashedPassword, role: normalizedRole });
-    res.json({ success: true, message: 'User registered!' });
+        if (existingUser.rows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'Email already registered'
+            });
+        }
+
+        const hashedPassword =
+            await bcrypt.hash(password, 10);
+
+        const result = await pool.query(
+            `
+                INSERT INTO users (
+                    full_name,
+                    phone,
+                    email,
+                    password_hash,
+                    role
+                )
+                VALUES ($1, $2, $3, $4, $5)
+                RETURNING
+                    id,
+                    full_name,
+                    phone,
+                    email,
+                    role,
+                    created_at
+            `,
+            [
+                normalizedName,
+                normalizedPhone,
+                normalizedEmail,
+                hashedPassword,
+                normalizedRole
+            ]
+        );
+
+        const user = result.rows[0];
+
+        return res.status(201).json({
+            success: true,
+            message: 'User registered!',
+            user: {
+                id: user.id,
+                name: user.full_name,
+                phone: user.phone,
+                email: user.email,
+                role: user.role,
+                createdAt: user.created_at
+            }
+        });
+    } catch (error) {
+        console.error(
+            'Registration failed:',
+            error
+        );
+
+        if (error.code === '23505') {
+            return res.status(409).json({
+                success: false,
+                message: 'Email already registered'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message:
+                'The user could not be registered.'
+        });
+    }
 });
 
 app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    const normalizedEmail = normalizeEmail(email);
-    const now = Date.now();
-    const attemptRecord = loginAttempts.get(normalizedEmail);
-
-    if (!normalizedEmail || !password) {
-        return res.status(400).json({ success: false, message: 'Email and password are required' });
-    }
-
-    if (attemptRecord && attemptRecord.lockUntil && attemptRecord.lockUntil > now) {
-        return res.status(429).json({
-            success: false,
-            message: 'Too many failed login attempts. Please try again later.'
-        });
-    }
-
-    if (attemptRecord && attemptRecord.lockUntil && attemptRecord.lockUntil <= now) {
-        loginAttempts.delete(normalizedEmail);
-    }
-
-    const user = users.find(u => normalizeEmail(u.email) === normalizedEmail);
-
-    if (!user) {
-        loginAttempts.set(normalizedEmail, {
-            count: (attemptRecord?.count || 0) + 1,
-            lockUntil: (attemptRecord?.count || 0) + 1 >= MAX_LOGIN_ATTEMPTS ? now + LOGIN_LOCKOUT_MS : null
-        });
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    const passwordMatches = await bcrypt.compare(password, user.password);
-    if (passwordMatches) {
-        loginAttempts.delete(normalizedEmail);
-        res.json({ success: true, role: user.role, name: user.name });
-    } else {
-        const nextCount = (attemptRecord?.count || 0) + 1;
-        loginAttempts.set(normalizedEmail, {
-            count: nextCount,
-            lockUntil: nextCount >= MAX_LOGIN_ATTEMPTS ? now + LOGIN_LOCKOUT_MS : null
-        });
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-});
-
-// ─── Property Routes ────────────────────────────────────────────────────────
-app.post('/properties', (req, res) => {
-    const { email, address, neighborhood, squareFootage, garage, publicTransport } = req.body;
-    // Issue #16: normalize and validate required property record fields.
-    const normalizedEmail = normalizeEmail(email);
-    const normalizedAddress = (address || '').trim();
-    const normalizedNeighborhood = (neighborhood || '').trim();
-    const parsedSquareFootage = Number(squareFootage);
-
-    if (!normalizedEmail || !normalizedAddress || !normalizedNeighborhood || !Number.isInteger(parsedSquareFootage) || parsedSquareFootage < 1 || !garage || !publicTransport) {
-        return res.json({ success: false, message: 'All property fields are required.' });
-    }
-
-    // Issue #16: save property and owner identifiers with required details.
-    properties.push({
-        propertyId: nextPropertyId++,
-        ownerId: normalizedEmail,
-        email: normalizedEmail,
-        address: normalizedAddress,
-        neighborhood: normalizedNeighborhood,
-        squareFootage: parsedSquareFootage,
-        garage,
-        publicTransport,
-        workspaces: []
-    });
-    res.json({ success: true, message: 'Property added!' });
-});
-
-app.get('/properties', (req, res) => {
-    const email = normalizeEmail(req.query.email);
-    const userProperties = properties
-        .map((property, propertyIndex) => ({ ...property, propertyIndex }))
-        .filter(property => normalizeEmail(property.email) === email);
-    res.json({ success: true, properties: userProperties });
-});
-
-app.put('/properties/:index', (req, res) => {
     const {
         email,
-        address,
-        neighborhood,
-        squareFootage,
-        garage,
-        publicTransport
+        password
     } = req.body;
 
-    const normalizedEmail = normalizeEmail(email);
-    const propertyIndex = Number(req.params.index);
-    const normalizedAddress = String(address || '').trim();
-    const normalizedNeighborhood = String(neighborhood || '').trim();
-    const parsedSquareFootage = Number(squareFootage);
+    const normalizedEmail =
+        normalizeEmail(email);
 
-    if (
-        !Number.isInteger(propertyIndex) ||
-        propertyIndex < 0 ||
-        propertyIndex >= properties.length
-    ) {
-        return res.json({
+    const now = Date.now();
+
+    const attemptRecord =
+        loginAttempts.get(normalizedEmail);
+
+    if (!normalizedEmail || !password) {
+        return res.status(400).json({
             success: false,
-            message: 'Invalid property selection.'
-        });
-    }
-
-    const property = properties[propertyIndex];
-
-    if (
-        !property ||
-        normalizeEmail(property.email) !== normalizedEmail
-    ) {
-        return res.json({
-            success: false,
-            message: 'Property not found for this owner.'
+            message:
+                'Email and password are required'
         });
     }
 
     if (
-        !normalizedAddress ||
-        !normalizedNeighborhood ||
-        !Number.isInteger(parsedSquareFootage) ||
-        parsedSquareFootage < 1 ||
-        !garage ||
-        !publicTransport
+        attemptRecord &&
+        attemptRecord.lockUntil &&
+        attemptRecord.lockUntil > now
     ) {
-        return res.json({
+        return res.status(429).json({
             success: false,
-            message: 'All property fields are required.'
+            message:
+                'Too many failed login attempts. Please try again later.'
         });
     }
 
-    property.address = normalizedAddress;
-    property.neighborhood = normalizedNeighborhood;
-    property.squareFootage = parsedSquareFootage;
-    property.garage = garage;
-    property.publicTransport = publicTransport;
-
-    return res.json({
-        success: true,
-        message: 'Property updated successfully.'
-    });
-});
-
-app.delete('/properties/:index', (req, res) => {
-    const email = normalizeEmail(req.body.email);
-    const index = parseInt(req.params.index, 10);
-
-    if (!Number.isInteger(index)) {
-        return res.status(400).json({ success: false, message: 'Invalid property index.' });
+    if (
+        attemptRecord &&
+        attemptRecord.lockUntil &&
+        attemptRecord.lockUntil <= now
+    ) {
+        loginAttempts.delete(
+            normalizedEmail
+        );
     }
 
-    const property = properties[index];
+    try {
+        const result = await pool.query(
+            `
+                SELECT
+                    id,
+                    full_name,
+                    email,
+                    password_hash,
+                    role
+                FROM users
+                WHERE email = $1
+            `,
+            [normalizedEmail]
+        );
 
-    if (index >= 0 && property && normalizeEmail(property.email) === email) {
-        properties.splice(index, 1);
-        res.json({ success: true });
-    } else {
-        res.json({ success: false, message: 'Property not found' });
-    }
-});
+        const user = result.rows[0];
 
-// ─── Workspace Routes ───────────────────────────────────────────────────────
-app.post('/workspaces', (req, res) => {
-    const { email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price } = req.body;
-    const normalizedEmail = normalizeEmail(email);
-    const parsedPropertyIndex = Number(propertyIndex);
+        if (!user) {
+            const nextCount =
+                (attemptRecord?.count || 0) + 1;
 
-    if (!Number.isInteger(parsedPropertyIndex) || parsedPropertyIndex < 0 || parsedPropertyIndex >= properties.length) {
-        return res.json({ success: false, message: 'Property not found' });
-    }
+            loginAttempts.set(
+                normalizedEmail,
+                {
+                    count: nextCount,
+                    lockUntil:
+                        nextCount >=
+                        MAX_LOGIN_ATTEMPTS
+                            ? now +
+                              LOGIN_LOCKOUT_MS
+                            : null
+                }
+            );
 
-    const property = properties[parsedPropertyIndex];
-    if (!property || normalizeEmail(property.email) !== normalizedEmail) {
-        return res.json({ success: false, message: 'Property not found for this owner.' });
-    }
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
 
-    if (type && capacity && smoking && availability && leaseTerm && price) {
-        property.workspaces.push({ type, capacity, smoking, availability, leaseTerm, price, ownerEmail: normalizedEmail });
-        res.json({ success: true, message: 'Workspace added!' });
-    } else {
-        res.json({ success: false, message: 'Please fill in all required workspace fields.' });
-    }
-});
+        const passwordMatches =
+            await bcrypt.compare(
+                password,
+                user.password_hash
+            );
 
-app.put('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
-    const { email, type, capacity, smoking, availability, leaseTerm, price } = req.body;
-    const normalizedEmail = normalizeEmail(email);
-    const propertyIndex = Number(req.params.propertyIndex);
-    const workspaceIndex = Number(req.params.workspaceIndex);
+        if (!passwordMatches) {
+            const nextCount =
+                (attemptRecord?.count || 0) + 1;
 
-    if (!Number.isInteger(propertyIndex) || !Number.isInteger(workspaceIndex) || propertyIndex < 0 || workspaceIndex < 0) {
-        return res.json({ success: false, message: 'Invalid workspace selection.' });
-    }
+            loginAttempts.set(
+                normalizedEmail,
+                {
+                    count: nextCount,
+                    lockUntil:
+                        nextCount >=
+                        MAX_LOGIN_ATTEMPTS
+                            ? now +
+                              LOGIN_LOCKOUT_MS
+                            : null
+                }
+            );
 
-    const property = properties[propertyIndex];
-    if (!property || normalizeEmail(property.email) !== normalizedEmail) {
-        return res.json({ success: false, message: 'Property not found for this owner.' });
-    }
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
+        }
 
-    const normalizedType = (type || '').trim();
-    const normalizedSmoking = (smoking || '').trim();
-    const normalizedAvailability = (availability || '').trim();
-    const normalizedLeaseTerm = (leaseTerm || '').trim();
-    const parsedCapacity = Number(capacity);
-    const parsedPrice = Number(price);
+        loginAttempts.delete(
+            normalizedEmail
+        );
 
-    if (!normalizedType || !Number.isFinite(parsedCapacity) || parsedCapacity < 1 || !normalizedSmoking || !normalizedAvailability || !normalizedLeaseTerm || !Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-        return res.json({ success: false, message: 'All workspace fields are required.' });
-    }
+        const token = jwt.sign(
+            {
+                userId: user.id,
+                email: user.email,
+                role: user.role
+            },
+            JWT_SECRET,
+            {
+                expiresIn: '2h'
+            }
+        );
 
-    if (!property.workspaces || workspaceIndex >= property.workspaces.length) {
-        return res.json({ success: false, message: 'Workspace not found.' });
-    }
-
-    property.workspaces[workspaceIndex] = {
-        ...property.workspaces[workspaceIndex],
-        type: normalizedType,
-        capacity: parsedCapacity,
-        smoking: normalizedSmoking,
-        availability: normalizedAvailability,
-        leaseTerm: normalizedLeaseTerm,
-        price: parsedPrice,
-        ownerEmail: normalizedEmail
-    };
-
-    res.json({ success: true, message: 'Workspace updated!' });
-});
-
-app.delete('/workspaces/:propertyIndex/:workspaceIndex', (req, res) => {
-    const email = normalizeEmail(req.body.email);
-    const propertyIndex = Number(req.params.propertyIndex);
-    const workspaceIndex = Number(req.params.workspaceIndex);
-
-    if (!Number.isInteger(propertyIndex) || !Number.isInteger(workspaceIndex) || propertyIndex < 0 || workspaceIndex < 0) {
-        return res.json({ success: false, message: 'Invalid workspace selection.' });
-    }
-
-    const property = properties[propertyIndex];
-    if (!property || normalizeEmail(property.email) !== email) {
-        return res.json({ success: false, message: 'Property not found for this owner.' });
-    }
-
-    if (!property.workspaces || workspaceIndex >= property.workspaces.length) {
-        return res.json({ success: false, message: 'Workspace not found.' });
-    }   
-
-    property.workspaces.splice(workspaceIndex, 1);
-    res.json({ success: true, message: 'Workspace deleted!' });
-});
-
-app.get('/workspaces', (req, res) => {
-    const allWorkspaces = [];
-    properties.forEach((p, pIndex) => {
-        p.workspaces.forEach((w, wIndex) => {
-            allWorkspaces.push({ ...w, propertyIndex: pIndex, workspaceIndex: wIndex, address: p.address, neighborhood: p.neighborhood, ownerEmail: p.email });
+        return res.json({
+            success: true,
+            message: 'Login successful',
+            token,
+            user: {
+                id: user.id,
+                name: user.full_name,
+                email: user.email,
+                role: user.role
+            },
+            role: user.role,
+            name: user.full_name
         });
-    });
-    res.json({ success: true, workspaces: allWorkspaces });
+    } catch (error) {
+        console.error(
+            'Login failed:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: 'Login failed.'
+        });
+    }
 });
 
-// ─── Contact Message Routes (Issue #23) ─────────────────────────────────────
-app.post('/messages', (req, res) => {
+// ─── Property Routes ───────────────────────────────────────────────────────
+app.post(
+    '/properties',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const {
+            address,
+            neighborhood,
+            squareFootage,
+            garage,
+            publicTransport
+        } = req.body;
+
+        const normalizedAddress =
+            String(address || '').trim();
+
+        const normalizedNeighborhood =
+            String(neighborhood || '').trim();
+
+        const parsedSquareFootage =
+            Number(squareFootage);
+
+        const parsedGarage =
+            parseBooleanChoice(garage);
+
+        const parsedPublicTransport =
+            parseBooleanChoice(publicTransport);
+
+        if (
+            !normalizedAddress ||
+            !normalizedNeighborhood ||
+            !Number.isInteger(parsedSquareFootage) ||
+            parsedSquareFootage < 1 ||
+            parsedGarage === null ||
+            parsedPublicTransport === null
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'All valid property fields are required.'
+            });
+        }
+
+        try {
+            const result = await pool.query(
+                `
+                    INSERT INTO properties (
+                        owner_id,
+                        address,
+                        neighborhood,
+                        square_footage,
+                        garage,
+                        public_transport
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING *
+                `,
+                [
+                    req.user.userId,
+                    normalizedAddress,
+                    normalizedNeighborhood,
+                    parsedSquareFootage,
+                    parsedGarage,
+                    parsedPublicTransport
+                ]
+            );
+
+            const property = result.rows[0];
+
+            return res.status(201).json({
+                success: true,
+                message: 'Property added!',
+                property: {
+                    id: property.id,
+                    propertyId: property.id,
+                    propertyIndex: property.id,
+                    address: property.address,
+                    neighborhood: property.neighborhood,
+                    squareFootage:
+                        property.square_footage,
+                    garage:
+                        property.garage
+                            ? 'Yes'
+                            : 'No',
+                    publicTransport:
+                        property.public_transport
+                            ? 'Yes'
+                            : 'No'
+                }
+            });
+        } catch (error) {
+            console.error(
+                'Property creation failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'The property could not be added.'
+            });
+        }
+    }
+);
+
+app.get(
+    '/properties',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        try {
+            const result = await pool.query(
+                `
+                    SELECT
+                        p.*,
+                        COUNT(w.id)::INTEGER
+                            AS workspace_count
+                    FROM properties p
+                    LEFT JOIN workspaces w
+                        ON w.property_id = p.id
+                    WHERE p.owner_id = $1
+                    GROUP BY p.id
+                    ORDER BY p.id
+                `,
+                [req.user.userId]
+            );
+
+            const userProperties =
+                result.rows.map(property => ({
+                    id: property.id,
+                    propertyId: property.id,
+                    propertyIndex: property.id,
+                    ownerId: property.owner_id,
+                    address: property.address,
+                    neighborhood:
+                        property.neighborhood,
+                    squareFootage:
+                        property.square_footage,
+                    garage:
+                        property.garage
+                            ? 'Yes'
+                            : 'No',
+                    publicTransport:
+                        property.public_transport
+                            ? 'Yes'
+                            : 'No',
+                    workspaceCount:
+                        property.workspace_count,
+                    workspaces: Array(
+                        property.workspace_count
+                    ).fill(null)
+                }));
+
+            return res.json({
+                success: true,
+                properties: userProperties
+            });
+        } catch (error) {
+            console.error(
+                'Property loading failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'Properties could not be loaded.'
+            });
+        }
+    }
+);
+
+app.put(
+    '/properties/:id',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const propertyId =
+            Number(req.params.id);
+
+        const {
+            address,
+            neighborhood,
+            squareFootage,
+            garage,
+            publicTransport
+        } = req.body;
+
+        const normalizedAddress =
+            String(address || '').trim();
+
+        const normalizedNeighborhood =
+            String(neighborhood || '').trim();
+
+        const parsedSquareFootage =
+            Number(squareFootage);
+
+        const parsedGarage =
+            parseBooleanChoice(garage);
+
+        const parsedPublicTransport =
+            parseBooleanChoice(publicTransport);
+
+        if (
+            !Number.isInteger(propertyId) ||
+            propertyId < 1
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid property ID.'
+            });
+        }
+
+        if (
+            !normalizedAddress ||
+            !normalizedNeighborhood ||
+            !Number.isInteger(parsedSquareFootage) ||
+            parsedSquareFootage < 1 ||
+            parsedGarage === null ||
+            parsedPublicTransport === null
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'All valid property fields are required.'
+            });
+        }
+
+        try {
+            const result = await pool.query(
+                `
+                    UPDATE properties
+                    SET
+                        address = $1,
+                        neighborhood = $2,
+                        square_footage = $3,
+                        garage = $4,
+                        public_transport = $5
+                    WHERE
+                        id = $6
+                        AND owner_id = $7
+                    RETURNING *
+                `,
+                [
+                    normalizedAddress,
+                    normalizedNeighborhood,
+                    parsedSquareFootage,
+                    parsedGarage,
+                    parsedPublicTransport,
+                    propertyId,
+                    req.user.userId
+                ]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        'Property not found for this owner.'
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'Property updated!',
+                property: result.rows[0]
+            });
+        } catch (error) {
+            console.error(
+                'Property update failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'The property could not be updated.'
+            });
+        }
+    }
+);
+
+app.delete(
+    '/properties/:id',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const propertyId =
+            Number(req.params.id);
+
+        if (
+            !Number.isInteger(propertyId) ||
+            propertyId < 1
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid property ID.'
+            });
+        }
+
+        try {
+            const result = await pool.query(
+                `
+                    DELETE FROM properties
+                    WHERE
+                        id = $1
+                        AND owner_id = $2
+                    RETURNING id
+                `,
+                [
+                    propertyId,
+                    req.user.userId
+                ]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        'Property not found for this owner.'
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'Property deleted!'
+            });
+        } catch (error) {
+            console.error(
+                'Property deletion failed:',
+                error
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    'The property could not be deleted.'
+            });
+        }
+    }
+);
+
+// ─── Workspace Routes ──────────────────────────────────────────────────────
+app.post(
+    '/workspaces',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const {
+            propertyIndex,
+            type,
+            capacity,
+            smoking,
+            availability,
+            leaseTerm,
+            price
+        } = req.body;
+
+        const parsedPropertyId = Number(propertyIndex);
+        const normalizedType = String(type || '').trim();
+        const parsedCapacity = Number(capacity);
+        const parsedSmoking = parseBooleanChoice(smoking);
+        const normalizedAvailability = String(availability || '').trim();
+        const normalizedLeaseTerm = String(leaseTerm || '').trim();
+        const parsedPrice = Number(price);
+
+        if (!Number.isInteger(parsedPropertyId) || parsedPropertyId < 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Property not found'
+            });
+        }
+
+        if (
+            !normalizedType ||
+            !Number.isInteger(parsedCapacity) ||
+            parsedCapacity < 1 ||
+            parsedSmoking === null ||
+            !normalizedAvailability ||
+            !normalizedLeaseTerm ||
+            !Number.isFinite(parsedPrice) ||
+            parsedPrice <= 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please fill in all required workspace fields.'
+            });
+        }
+
+        try {
+            const propertyResult = await pool.query(
+                `
+                    SELECT id
+                    FROM properties
+                    WHERE id = $1 AND owner_id = $2
+                `,
+                [parsedPropertyId, req.user.userId]
+            );
+
+            if (propertyResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Property not found for this owner.'
+                });
+            }
+
+            const workspaceResult = await pool.query(
+                `
+                    INSERT INTO workspaces (
+                        property_id,
+                        owner_id,
+                        type,
+                        capacity,
+                        smoking,
+                        availability,
+                        rental_term,
+                        price
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING *
+                `,
+                [
+                    parsedPropertyId,
+                    req.user.userId,
+                    normalizedType,
+                    parsedCapacity,
+                    parsedSmoking,
+                    normalizedAvailability,
+                    normalizedLeaseTerm,
+                    parsedPrice
+                ]
+            );
+
+            const workspace = workspaceResult.rows[0];
+
+            return res.json({
+                success: true,
+                message: 'Workspace added!',
+                workspace: {
+                    id: workspace.id,
+                    propertyIndex: workspace.property_id,
+                    workspaceIndex: workspace.id,
+                    type: workspace.type,
+                    capacity: workspace.capacity,
+                    smoking: workspace.smoking ? 'Yes' : 'No',
+                    availability: workspace.availability,
+                    leaseTerm: workspace.rental_term,
+                    price: Number(workspace.price)
+                }
+            });
+        } catch (error) {
+            console.error('Workspace creation failed:', error);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Workspace could not be added.'
+            });
+        }
+    }
+);
+
+app.put(
+    '/workspaces/:propertyIndex/:workspaceIndex',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const {
+            type,
+            capacity,
+            smoking,
+            availability,
+            leaseTerm,
+            price
+        } = req.body;
+
+        const propertyIndex = Number(req.params.propertyIndex);
+        const workspaceIndex = Number(req.params.workspaceIndex);
+
+        if (
+            !Number.isInteger(propertyIndex) ||
+            !Number.isInteger(workspaceIndex) ||
+            propertyIndex < 1 ||
+            workspaceIndex < 1
+        ) {
+            return res.json({
+                success: false,
+                message: 'Invalid workspace selection.'
+            });
+        }
+
+        const normalizedType = String(type || '').trim();
+        const parsedCapacity = Number(capacity);
+        const parsedSmoking = parseBooleanChoice(smoking);
+        const normalizedAvailability = String(availability || '').trim();
+        const normalizedLeaseTerm = String(leaseTerm || '').trim();
+        const parsedPrice = Number(price);
+
+        if (
+            !normalizedType ||
+            !Number.isInteger(parsedCapacity) ||
+            parsedCapacity < 1 ||
+            parsedSmoking === null ||
+            !normalizedAvailability ||
+            !normalizedLeaseTerm ||
+            !Number.isFinite(parsedPrice) ||
+            parsedPrice <= 0
+        ) {
+            return res.json({
+                success: false,
+                message: 'All workspace fields are required.'
+            });
+        }
+
+        try {
+            const propertyResult = await pool.query(
+                `
+                    SELECT id
+                    FROM properties
+                    WHERE id = $1 AND owner_id = $2
+                `,
+                [propertyIndex, req.user.userId]
+            );
+
+            if (propertyResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Property not found for this owner.'
+                });
+            }
+
+            const workspaceResult = await pool.query(
+                `
+                    UPDATE workspaces
+                    SET
+                        type = $1,
+                        capacity = $2,
+                        smoking = $3,
+                        availability = $4,
+                        rental_term = $5,
+                        price = $6
+                    WHERE
+                        id = $7
+                        AND property_id = $8
+                        AND owner_id = $9
+                    RETURNING id
+                `,
+                [
+                    normalizedType,
+                    parsedCapacity,
+                    parsedSmoking,
+                    normalizedAvailability,
+                    normalizedLeaseTerm,
+                    parsedPrice,
+                    workspaceIndex,
+                    propertyIndex,
+                    req.user.userId
+                ]
+            );
+
+            if (workspaceResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Workspace not found.'
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'Workspace updated!'
+            });
+        } catch (error) {
+            console.error('Workspace update failed:', error);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Workspace could not be updated.'
+            });
+        }
+    }
+);
+
+app.delete(
+    '/workspaces/:propertyIndex/:workspaceIndex',
+    authenticateToken,
+    requireOwner,
+    async (req, res) => {
+        const propertyIndex = Number(req.params.propertyIndex);
+        const workspaceIndex = Number(req.params.workspaceIndex);
+
+        if (
+            !Number.isInteger(propertyIndex) ||
+            !Number.isInteger(workspaceIndex) ||
+            propertyIndex < 1 ||
+            workspaceIndex < 1
+        ) {
+            return res.json({
+                success: false,
+                message: 'Invalid workspace selection.'
+            });
+        }
+
+        try {
+            const propertyResult = await pool.query(
+                `
+                    SELECT id
+                    FROM properties
+                    WHERE id = $1 AND owner_id = $2
+                `,
+                [propertyIndex, req.user.userId]
+            );
+
+            if (propertyResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Property not found for this owner.'
+                });
+            }
+
+            const deleteResult = await pool.query(
+                `
+                    DELETE FROM workspaces
+                    WHERE
+                        id = $1
+                        AND property_id = $2
+                        AND owner_id = $3
+                    RETURNING id
+                `,
+                [workspaceIndex, propertyIndex, req.user.userId]
+            );
+
+            if (deleteResult.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Workspace not found.'
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'Workspace deleted!'
+            });
+        } catch (error) {
+            console.error('Workspace deletion failed:', error);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Workspace could not be deleted.'
+            });
+        }
+    }
+);
+
+app.get(
+    '/workspaces',
+    authenticateToken,
+    async (req, res) => {
+        try {
+            const result = await pool.query(
+                `
+                    SELECT
+                        w.id,
+                        w.property_id,
+                        w.type,
+                        w.capacity,
+                        w.smoking,
+                        w.availability,
+                        w.rental_term,
+                        w.price,
+                        p.address,
+                        p.neighborhood,
+                        u.email AS owner_email
+                    FROM workspaces w
+                    INNER JOIN properties p
+                        ON p.id = w.property_id
+                    INNER JOIN users u
+                        ON u.id = w.owner_id
+                    ORDER BY w.id
+                `
+            );
+
+            const allWorkspaces = result.rows.map(workspace => ({
+                id: workspace.id,
+                propertyIndex: workspace.property_id,
+                workspaceIndex: workspace.id,
+                type: workspace.type,
+                capacity: workspace.capacity,
+                smoking: workspace.smoking ? 'Yes' : 'No',
+                availability: workspace.availability,
+                leaseTerm: workspace.rental_term,
+                price: Number(workspace.price),
+                address: workspace.address,
+                neighborhood: workspace.neighborhood,
+                ownerEmail: workspace.owner_email
+            }));
+
+            return res.json({
+                success: true,
+                workspaces: allWorkspaces
+            });
+        } catch (error) {
+            console.error('Workspace loading failed:', error);
+
+            return res.status(500).json({
+                success: false,
+                message: 'Workspaces could not be loaded.'
+            });
+        }
+    }
+);
+
+// ─── Contact Message Routes ────────────────────────────────────────────────
+app.post('/messages', async (req, res) => {
     const {
         fromEmail,
         toEmail,
@@ -357,36 +1123,213 @@ app.post('/messages', (req, res) => {
         workspaceType
     } = req.body;
 
-    const normalizedToEmail = String(toEmail || '').trim();
-    const normalizedSenderName = String(senderName || '').trim();
-    const normalizedSenderEmail = String(senderEmail || '').trim();
-    const normalizedMessage = String(message || '').trim();
+    const normalizedToEmail =
+        String(toEmail || '').trim();
 
-    if (!normalizedToEmail || !normalizedSenderName || !normalizedSenderEmail || !normalizedMessage) {
-        return res.json({ success: false, message: 'All contact fields are required.' });
+    const normalizedSenderName =
+        String(senderName || '').trim();
+
+    const normalizedSenderEmail =
+        String(senderEmail || '').trim();
+
+    const normalizedMessage =
+        String(message || '').trim();
+
+    const parsedPropertyIndex =
+        Number(propertyIndex);
+
+    const parsedWorkspaceIndex =
+        Number(workspaceIndex);
+
+    if (
+        !normalizedToEmail ||
+        !normalizedSenderName ||
+        !normalizedSenderEmail ||
+        !normalizedMessage ||
+        !Number.isInteger(parsedPropertyIndex) ||
+        parsedPropertyIndex < 0 ||
+        !Number.isInteger(parsedWorkspaceIndex) ||
+        parsedWorkspaceIndex < 0
+    ) {
+        return res.json({
+            success: false,
+            message:
+                'All contact fields are required.'
+        });
     }
 
-    contactMessages.push({
-        fromEmail: String(fromEmail || '').trim(),
-        toEmail: normalizedToEmail,
-        senderName: normalizedSenderName,
-        senderEmail: normalizedSenderEmail,
-        message: normalizedMessage,
-        propertyIndex,
-        workspaceIndex,
-        workspaceType: String(workspaceType || '').trim(),
-        createdAt: new Date().toISOString()
-    });
+    const matchingProperty =
+        properties[parsedPropertyIndex];
 
-    return res.json({ success: true, message: 'Message sent to owner.' });
+    if (matchingProperty) {
+        const matchingWorkspace =
+            matchingProperty.workspaces?.[
+                parsedWorkspaceIndex
+            ];
+
+        if (!matchingWorkspace) {
+            return res.json({
+                success: false,
+                message: 'Workspace not found.'
+            });
+        }
+
+        if (
+            normalizeEmail(
+                matchingProperty.email
+            ) !==
+            normalizeEmail(
+                normalizedToEmail
+            )
+        ) {
+            return res.json({
+                success: false,
+                message:
+                    'Owner and workspace do not match.'
+            });
+        }
+    }
+
+    const normalizedWorkspaceType =
+        String(
+            workspaceType || ''
+        ).trim();
+
+    try {
+        await pool.query(
+            `
+                INSERT INTO contact_messages_v2 (
+                    from_email,
+                    to_email,
+                    sender_name,
+                    sender_email,
+                    message,
+                    property_index,
+                    workspace_index,
+                    workspace_type
+                )
+                VALUES (
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7,
+                    $8
+                )
+            `,
+            [
+                normalizeEmail(fromEmail),
+                normalizeEmail(
+                    normalizedToEmail
+                ),
+                normalizedSenderName,
+                normalizeEmail(
+                    normalizedSenderEmail
+                ),
+                normalizedMessage,
+                parsedPropertyIndex,
+                parsedWorkspaceIndex,
+                normalizedWorkspaceType
+            ]
+        );
+    } catch (error) {
+        console.error(
+            'Message save failed:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                'Message could not be saved.'
+        });
+    }
+
+    return res.json({
+        success: true,
+        message:
+            'Message sent to owner.'
+    });
 });
 
-// ─── Server Start ───────────────────────────────────────────────────────────
+app.get('/messages', async (req, res) => {
+    const ownerEmail =
+        normalizeEmail(
+            req.query.ownerEmail ||
+                req.query.toEmail
+        );
+
+    if (!ownerEmail) {
+        return res.status(400).json({
+            success: false,
+            message:
+                'ownerEmail is required.'
+        });
+    }
+
+    try {
+        const result = await pool.query(
+            `
+                SELECT
+                    id,
+                    from_email AS "fromEmail",
+                    to_email AS "toEmail",
+                    sender_name AS "senderName",
+                    sender_email AS "senderEmail",
+                    message,
+                    property_index AS "propertyIndex",
+                    workspace_index AS "workspaceIndex",
+                    workspace_type AS "workspaceType",
+                    created_at AS "createdAt"
+                FROM contact_messages_v2
+                WHERE to_email = $1
+                ORDER BY id DESC
+            `,
+            [ownerEmail]
+        );
+
+        return res.json({
+            success: true,
+            messages: result.rows
+        });
+    } catch (error) {
+        console.error(
+            'Message load failed:',
+            error
+        );
+
+        return res.status(500).json({
+            success: false,
+            message:
+                'Messages could not be loaded.'
+        });
+    }
+});
+
+// ─── Server Start ──────────────────────────────────────────────────────────
+async function startServer() {
+    try {
+        await initializeDatabase();
+
+        app.listen(PORT, () => {
+            console.log(
+                `Server running on port ${PORT}`
+            );
+        });
+    } catch (error) {
+        console.error(
+            'The server could not start because the database setup failed:',
+            error
+        );
+
+        process.exit(1);
+    }
+}
+
 if (require.main === module) {
-    const port = Number(process.env.PORT) || 3000;
-    app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
-    });
+    startServer();
 }
 
 module.exports = {
