@@ -143,12 +143,14 @@
 
     <script src="auth.js"></script>
     <script>
+        // Require owner authentication
         requireAuth();
-        const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
         if (role !== 'owner') {
             window.location.replace('login.html');
         }
+
+        const email = localStorage.getItem('email');
 
         document.getElementById('logoutBtn').addEventListener('click', () => {
             clearAuth();

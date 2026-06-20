@@ -393,7 +393,7 @@
         <div class="nav-links">
             <a href="index.html">Dashboard</a>
 
-            <button class="logout-button" onclick="logout()">
+            <button class="logout-button" id="logoutBtn" type="button">
                 Logout
             </button>
         </div>
@@ -494,38 +494,33 @@
         <span>GitHub Repository | Contact Information</span>
     </footer>
 
+    <script src="auth.js"></script>
     <script>
-        const email = localStorage.getItem('email');
+        // Require owner authentication
+        requireAuth();
         const role = localStorage.getItem('role');
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
-
-        let loadedProperties = [];
-        let pendingEditIndex = null;
-
-        // Only logged-in owners can open this page.
-        if (!email || role !== 'owner') {
+        if (role !== 'owner') {
             window.location.replace('login.html');
         } else {
             loadProperties();
         }
 
+        const email = localStorage.getItem('email');
+
+        let loadedProperties = [];
+        let pendingEditIndex = null;
+
         async function loadProperties() {
             const list = document.getElementById('properties-list');
 
             try {
-                const response = await fetch(
-                    apiUrl('/properties?email=' + encodeURIComponent(email))
-                );
+                const response = await apiGet('/properties');
 
-                const data = await response.json();
+                if (!response) {
+                    throw new Error('Failed to load properties');
+                }
 
+                const { data } = response;
                 loadedProperties = data.properties || [];
                 list.innerHTML = '';
 
@@ -653,15 +648,13 @@
             const index = pendingDeleteIndex;
             closeModal();
             try {
-                const response = await fetch(apiUrl('/properties/' + index), {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ email })
-                });
+                const response = await apiDelete(`/properties/${index}`);
 
-                const data = await response.json();
+                if (!response) {
+                    throw new Error('Failed to delete property');
+                }
+
+                const { data } = response;
 
                 if (data.success) {
                     loadProperties();
@@ -673,6 +666,7 @@
                 console.error('Error deleting property:', error);
             }
         });
+
         function openEditModal(propertyIndex) {
             const property = loadedProperties.find(item => {
                 const itemIndex =
@@ -756,18 +750,16 @@
                 message.textContent = '';
 
                 try {
-                    const response = await fetch(
-                        '/properties/' + pendingEditIndex,
-                        {
-                            method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        }
+                    const response = await apiPut(
+                        `/properties/${pendingEditIndex}`,
+                        payload
                     );
 
-                    const data = await response.json();
+                    if (!response) {
+                        throw new Error('Failed to update property');
+                    }
+
+                    const { data } = response;
 
                     if (!data.success) {
                         message.textContent =
@@ -790,10 +782,10 @@
                 }
             });
 
-        function logout() {
-            localStorage.clear();
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            clearAuth();
             window.location.href = 'login.html';
-        }
+        });
     </script>
 </body>
 

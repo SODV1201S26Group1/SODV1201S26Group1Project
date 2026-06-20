@@ -433,9 +433,11 @@
         </span>
     </footer>
 
+    <script src="auth.js"></script>
     <script>
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
+        const isLoggedIn = isAuthenticated();
 
         const authStatus = document.getElementById('authStatus');
         const propertiesLink = document.getElementById('propertiesLink');
@@ -474,7 +476,7 @@
             }
         });
 
-        if (email) {
+        if (isLoggedIn && email) {
             const roleLabel = role ? String(role).charAt(0).toUpperCase() + String(role).slice(1) : 'User';
             authStatus.textContent = `Signed in: ${email} (${roleLabel})`;
             authStatus.style.display = 'inline-flex';
@@ -509,7 +511,7 @@
         }
 
         logoutBtn.addEventListener('click', () => {
-            localStorage.clear();
+            clearAuth();
             window.location.href = 'login.html';
         });
     </script>

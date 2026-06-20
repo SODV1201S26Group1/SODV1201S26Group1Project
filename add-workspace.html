@@ -217,7 +217,7 @@
         <div class="nav-links">
             <a href="index.html">Dashboard</a>
             <a href="my-properties.html">My Properties</a>
-            <button type="button" onclick="logout()">Logout</button>
+            <button id="logoutBtn" type="button">Logout</button>
         </div>
     </nav>
 
@@ -277,16 +277,14 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
+        requireAuth();
         const email = localStorage.getItem('email');
         const role = localStorage.getItem('role');
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
 
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
+        if (role !== 'owner') {
+            window.location.href = 'login.html';
         }
 
         const params = new URLSearchParams(window.location.search);
@@ -296,15 +294,6 @@
         const editPropertyIndex = Number.parseInt(selectedPropertyIndex, 10);
         const editWorkspaceIndex = Number.parseInt(selectedWorkspaceIndex, 10);
 
-        if (!email || role !== 'owner') {
-            window.location.href = 'login.html';
-        }
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        }
-
         function setMessage(text, isSuccess = false) {
             const message = document.getElementById('message');
             message.textContent = text;
@@ -313,25 +302,73 @@
 
         // Load owner properties into dropdown
         async function loadProperties() {
-            const res = await fetch(apiUrl('/properties?email=' + encodeURIComponent(email)));
-            
-            const data = await res.json();
-            const select = document.getElementById('propertyIndex');
-            
-            data.properties.forEach((p, index) => {
-                const option = document.createElement('option');
+            const response = await apiGet('/properties');
 
-                option.value =
-                    p.propertyIndex !== undefined
-                        ? p.propertyIndex
-                        : index;
+            if (
+                !response ||
+                !response.data ||
+                !response.data.success
+            ) {
+                setMessage('Could not load properties.');
+                return;
+            }
 
-                option.textContent = p.address;
+            const properties = Array.isArray(
+                response.data.properties
+            )
+                ? response.data.properties
+                : [];
+
+            const select =
+                document.getElementById('propertyIndex');
+
+            select.innerHTML = `
+        <option value="">
+            Choose a property
+        </option>
+    `;
+
+            if (properties.length === 0) {
+                setMessage(
+                    'No properties found. Add a property first.'
+                );
+                return;
+            }
+
+            properties.forEach(property => {
+                const propertyId =
+                    property.id ??
+                    property.propertyId ??
+                    property.propertyIndex;
+
+                if (propertyId === undefined || propertyId === null) {
+                    return;
+                }
+
+                const option =
+                    document.createElement('option');
+
+                option.value = String(propertyId);
+                option.textContent = property.address;
+
                 select.appendChild(option);
             });
 
-            if (selectedPropertyIndex !== null) {
-                select.value = selectedPropertyIndex;
+            if (
+                selectedPropertyIndex !== null &&
+                selectedPropertyIndex !== ''
+            ) {
+                const matchingOption =
+                    Array.from(select.options).some(
+                        option =>
+                            option.value ===
+                            String(selectedPropertyIndex)
+                    );
+
+                if (matchingOption) {
+                    select.value =
+                        String(selectedPropertyIndex);
+                }
             }
         }
 
@@ -348,8 +385,13 @@
             }
 
             try {
-                const res = await fetch(apiUrl('/workspaces'));
-                const data = await res.json();
+                const response = await apiGet('/workspaces');
+
+                if (!response) {
+                    throw new Error('Failed to load workspaces');
+                }
+
+                const { data } = response;
                 const normalizedEmail = String(email || '').trim().toLowerCase();
                 const workspace = (data.workspaces || []).find((w) => {
                     const ownerEmail = String(w.ownerEmail || '').trim().toLowerCase();
@@ -423,7 +465,6 @@
             const endpoint = isEditMode
                 ? `/workspaces/${editPropertyIndex}/${editWorkspaceIndex}`
                 : '/workspaces';
-            const method = isEditMode ? 'PUT' : 'POST';
 
             const saveBtn = document.getElementById('saveBtn');
             const originalBtnText = saveBtn.textContent;
@@ -431,26 +472,21 @@
             saveBtn.textContent = isEditMode ? 'Updating...' : 'Saving...';
 
             try {
-                const res = await fetch(apiUrl(endpoint), {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price: parsedPrice })
-                });
+                const payload = { email, propertyIndex, type, capacity, smoking, availability, leaseTerm, price: parsedPrice };
+                let response;
 
-                let data;
-                try {
-                    data = await res.json();
-                } catch (parseError) {
-                    data = {
-                        success: false,
-                        message: 'Server returned an unexpected response. Please try again.'
-                    };
+                if (isEditMode) {
+                    response = await apiPut(endpoint, payload);
+                } else {
+                    response = await apiPost(endpoint, payload);
                 }
 
-                if (!res.ok && !data.message) {
-                    data.message = 'Workspace update failed. Please try again.';
+                if (!response) {
+                    setMessage('Workspace update failed. Please try again.');
+                    return;
                 }
 
+                const { data } = response;
                 setMessage(data.message || 'Request completed.', Boolean(data.success));
 
                 if (data.success) {
@@ -485,6 +521,11 @@
             }
             window.location.href = 'my-properties.html';
         }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            clearAuth();
+            window.location.href = 'login.html';
+        });
 
         initWorkspaceForm();
     </script>

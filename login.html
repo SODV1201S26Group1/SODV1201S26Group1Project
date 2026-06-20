@@ -244,20 +244,25 @@
             }
 
             const response = await apiPost('/login', { email, password });
+
             if (!response) {
                 messageEl.textContent = 'Login failed. Please try again.';
                 return;
             }
 
-            const { data } = response;
+            const { status, data } = response;
 
             if (data.success) {
+                // Store token and user info
                 setToken(data.token);
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('email', data.user?.email || email);
                 localStorage.setItem('role', data.user?.role || '');
                 localStorage.setItem('name', data.user?.name || '');
 
+                messageEl.textContent = '';
+
+                // Redirect based on role
                 if (data.user?.role === 'owner') {
                     window.location.href = 'my-properties.html';
                 } else {
