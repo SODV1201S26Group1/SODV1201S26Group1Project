@@ -223,16 +223,8 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
-        const API_BASE_URL = localStorage.getItem('apiBaseUrl')
-            || (window.location.hostname.endsWith('github.io')
-                ? 'https://sodv1201s26group1project-api.onrender.com'
-                : '');
-
-        function apiUrl(path) {
-            return `${API_BASE_URL}${path}`;
-        }
-
         function togglePasswordVisibility(inputId, buttonId) {
             const input = document.getElementById(inputId);
             const button = document.getElementById(buttonId);
@@ -244,24 +236,35 @@
         async function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const messageEl = document.getElementById('message');
 
-            const res = await fetch(apiUrl('/login'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await res.json();
+            if (!email || !password) {
+                messageEl.textContent = 'Email and password are required.';
+                return;
+            }
+
+            const response = await apiPost('/login', { email, password });
+            if (!response) {
+                messageEl.textContent = 'Login failed. Please try again.';
+                return;
+            }
+
+            const { data } = response;
 
             if (data.success) {
-                localStorage.setItem('role', data.role);
-                localStorage.setItem('email', email);
-                if (data.role === 'owner') {
+                setToken(data.token);
+                localStorage.setItem('userId', data.user?.id || '');
+                localStorage.setItem('email', data.user?.email || email);
+                localStorage.setItem('role', data.user?.role || '');
+                localStorage.setItem('name', data.user?.name || '');
+
+                if (data.user?.role === 'owner') {
                     window.location.href = 'my-properties.html';
                 } else {
                     window.location.href = 'workspaces.html';
                 }
             } else {
-                document.getElementById('message').textContent = data.message;
+                messageEl.textContent = data.message || 'Login failed.';
             }
         }
     </script>
